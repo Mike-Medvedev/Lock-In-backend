@@ -1,99 +1,23 @@
-import { createLogger, format, transports, addColors } from "winston";
-import type { TransformableInfo } from "logform";
-import { requestContext } from "../context/request.context.ts";
-import * as nodePath from "node:path";
-import Transport from "winston-transport";
-import * as Sentry from "@sentry/node";
+import { createLogger, transports, format } from "winston";
+import chalk from "chalk";
 
-const SentryWinstonTransport = Sentry.createSentryWinstonTransport(Transport);
-
-const logFile = nodePath.resolve(process.cwd(), "log.log");
-
-/**
- * Custom colors for each log level
- * Available colors: black, red, green, yellow, blue, magenta, cyan, white, gray/grey
- * Available styles: bold, dim, italic, underline, inverse, hidden, strikethrough
- * Combine with space: "bold red", "yellow underline"
- */
-addColors({
-  error: "bold red",
-  warn: "yellow",
-  info: "cyan",
-  http: "magenta",
-  verbose: "blue",
-  debug: "green",
-  silly: "gray",
-});
-
-type RequestLogInfo = TransformableInfo & {
-  reqId?: string;
-  method?: string;
-  path?: string;
-  body?: unknown;
-  err?: { cause?: string; stack?: string };
-};
-
-function devFormat(info: RequestLogInfo): string {
-  const requestMetaData = Object.entries({
-    requestId: info.reqId,
-    method: info.method,
-    path: info.path,
-    body: info.body,
-  }).filter(([, v]) => v !== undefined && v !== null);
-
-  const meta =
-    requestMetaData.length > 0 ? JSON.stringify(Object.fromEntries(requestMetaData), null, 2) : "";
-
-  const lines = [`${info.timestamp} ${info.level} ${info.message}`];
-  if (info.err?.cause) lines.push(String(info.err.cause));
-  if (info.err?.stack) lines.push(String(info.err.stack));
-
-  if (meta) lines.push(meta);
-
-  return lines.join("\r\n");
-}
-
-const addRequestContext = format((info) => {
-  const { reqId, method, path, body } = requestContext.getStore() ?? {};
-  return process.env.NODE_ENV === "production"
-    ? { ...info, reqId, method, path }
-    : { ...info, reqId, method, path, body };
-});
-
-const devLoggerOptions = {
+const logger = createLogger({
   level: "info",
+  transports: [new transports.Console()],
   format: format.combine(
-    addRequestContext(),
-    format.timestamp({ format: "YYYY-MM-DD hh:mm:ss A" }),
     format.errors({ stack: true }),
-    format.colorize({ all: true }), // Colorizes entire line, not just level
-    format.printf(devFormat),
+    format.timestamp(),
+    format.colorize(),
+    format.printf((info) => {
+      const { timestamp, level, message, requestId, method, path, stack, ...meta } = info;
+
+      const requestContext =
+        requestId && method && path ? ` ${chalk.blue(`[${requestId} ${method} ${path}]`)}` : "";
+
+      const loggerMetadata = Object.keys(meta).length ? ` ${JSON.stringify(meta)}` : "";
+
+      return `${timestamp} ${level}:${requestContext} ${message}${loggerMetadata}${stack ? "\n" + stack : ""}`;
+    }),
   ),
-  transports: [new transports.Console(), new SentryWinstonTransport()],
-};
-
-const prodLoggerOptions = {
-  level: "info",
-  defaultMeta: {
-    service: "lock-in-api",
-    env: process.env.NODE_ENV,
-  },
-  format: format.combine(
-    addRequestContext(),
-    format.timestamp({ format: "YYYY-MM-DD hh:mm:ss A" }),
-    format.errors({ stack: true }),
-    format.json(),
-  ),
-  transports: [
-    new transports.Console(),
-    new transports.File({ filename: logFile, options: { flags: "w" } }),
-    new SentryWinstonTransport(),
-  ],
-};
-
-const winstonLoggerOptions =
-  process.env.NODE_ENV !== "production" ? devLoggerOptions : prodLoggerOptions;
-
-const logger = createLogger(winstonLoggerOptions);
-
+});
 export default logger;

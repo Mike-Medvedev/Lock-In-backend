@@ -1,10 +1,16 @@
 {
   "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["src/*"],
+      "@root/*": ["./*"]
+    },
     "strict": true,
     "noEmit": true,
     "allowJs": true,
     "target": "esnext",
     "esModuleInterop": true,
+    "resolveJsonModule": true,
     "module": "esnext",
     "moduleResolution": "bundler",
     "isolatedModules": true,

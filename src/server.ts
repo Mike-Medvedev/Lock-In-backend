@@ -53,13 +53,14 @@ app.use("/transactions", TransactionRouter);
 app.use("/commitments", CommitmentRouter);
 
 app.get("/", (_, res) => {
+  console.log("Logging");
   res.send("Hello World");
 });
 
 app.use(errorHandler);
 
-const server = app.listen(Number(process.env.PORT), "0.0.0.0", (): void => {
-  logger.info(`Server listening on port ${process.env.PORT}`);
+const server = app.listen(3000, "0.0.0.0", (): void => {
+  console.info(`Server listening on port ${3000}`);
 });
 if (process.env.NODE_ENV === "production") {
   const shutdown = (signal: string) => {
