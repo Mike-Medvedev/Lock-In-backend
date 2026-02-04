@@ -1,33 +1,29 @@
 import type { DrizzleQueryError } from "drizzle-orm/errors";
-import postgres from "postgres";
-
-const { PostgresError } = postgres;
-
-export class DatabaseError extends Error {
-  params?: string[];
-  query?: string;
-  code?: string;
-  constructor(error: DrizzleQueryError) {
-    super(error.message, { cause: error.cause });
-    if (error.cause instanceof PostgresError) this.message = error.cause.message;
-    if (error.cause && typeof (error.cause as any).code === "string") {
-      this.code = (error.cause as any).code;
-    }
-    this.params = error.params;
-    this.query = error.query;
-    if (Error.captureStackTrace) {
-      Error.captureStackTrace(this, DatabaseError);
-    }
-  }
-}
 
 export { ZodError } from "zod";
 
+/**
+ * Wraps database errors and extracts the error code.
+ */
+export class DatabaseError extends Error {
+  code?: string;
+
+  constructor(error: DrizzleQueryError) {
+    const cause = error.cause as { code?: string; message?: string } | undefined;
+
+    super(cause?.message || error.message, { cause: error });
+    this.name = "DatabaseError";
+    if (cause?.code) this.code = cause.code;
+  }
+}
+
+/**
+ * Wraps unexpected errors.
+ */
 export class UnknownError extends Error {
   constructor(error: unknown) {
-    const msg = error instanceof Error ? error.message : String(error);
-    super(`Unknown Error: ${msg}`, { cause: error instanceof Error ? error : undefined });
+    const message = error instanceof Error ? error.message : String(error);
+    super(message, { cause: error instanceof Error ? error : undefined });
     this.name = "UnknownError";
-    if (Error.captureStackTrace) Error.captureStackTrace(this, UnknownError);
   }
 }

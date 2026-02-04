@@ -7,8 +7,7 @@ export function requestLogger(req: Request, _res: Response, next: NextFunction) 
   const method = req.method;
   const path = req.path;
   req.log = logger.child({ requestId, method, path });
-  const user = { 1: 1, 2: 2 };
-  req.log.info("Request received", user);
+  req.log.info("Request received");
 
-  next(new Error("poop"));
+  next();
 }

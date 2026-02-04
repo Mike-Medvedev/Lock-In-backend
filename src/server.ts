@@ -6,7 +6,6 @@ import { requestLogger } from "./middleware/logger.middleware.ts";
 import { UserRouter, TransactionRouter, CommitmentRouter } from "./routes/index.ts";
 import errorHandler from "./middleware/error.middleware.ts";
 import logger from "./logger/logger.ts";
-import { requestContextMiddleware } from "./middleware/request-context.middleware.ts";
 import { client as pgClient } from "./db/db.ts";
 import helmet from "helmet";
 
@@ -36,17 +35,16 @@ const corsOptions = {
 
 const app = express();
 
-app.get("/health", (_, res) => {
-  logger.info("healthy");
-  res.status(200).json({ status: "healthy" });
-});
-
 app.use(helmet());
 app.use(cors(corsOptions));
 
 app.use(json());
-app.use(requestContextMiddleware);
 app.use(requestLogger);
+
+app.get("/health", (_, res) => {
+  logger.info("healthy");
+  res.status(200).json({ status: "healthy" });
+});
 
 app.use("/users", UserRouter);
 app.use("/transactions", TransactionRouter);

@@ -9,33 +9,21 @@ const errorHandler: ErrorRequestHandler = function (
   res: Response,
   _next: NextFunction,
 ) {
-  if (error instanceof DrizzleQueryError) {
-    const databaseError = new DatabaseError(error);
+  if (error instanceof DrizzleQueryError || error instanceof DatabaseError) {
+    const databaseError = error instanceof DatabaseError ? error : new DatabaseError(error);
+    req.log.error(databaseError);
+
     if (databaseError?.code === "23505") {
-      req.log.error({ message: databaseError.message, err: databaseError });
       return res.sendStatus(409);
     }
-    if (databaseError?.code === "ECONNREFUSED") {
-      req.log.error({
-        message: "database refused to connect, retry not setup",
-        err: databaseError,
-      });
-      return res.sendStatus(500);
-    } else {
-      req.log.error({ message: "database error", err: databaseError });
-      return res.sendStatus(500);
-    }
+    return res.sendStatus(500);
   } else if (error instanceof ZodError) {
-    req.log.error({
-      message: "Zod validation error see trace for details",
-      err: { stack: error.stack },
-    });
-
+    req.log.error(error);
     return res.status(422).json({ detail: z.treeifyError(error) });
   } else {
     const unknownError = new UnknownError(error);
-    req.log.error({ message: unknownError.message, err: unknownError });
+    req.log.error(unknownError);
+    return res.sendStatus(500);
   }
-  return res.sendStatus(500);
 };
 export default errorHandler;
