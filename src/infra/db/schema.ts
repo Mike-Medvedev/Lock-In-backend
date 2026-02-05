@@ -1,7 +1,6 @@
 import {
   pgTable,
   pgEnum,
-  integer,
   varchar,
   bigint,
   check,
@@ -72,7 +71,7 @@ export const users = pgTable("users", {
 export const commitments = pgTable(
   "commitments",
   {
-    id: integer().primaryKey().generatedAlwaysAsIdentity(),
+    id: uuid().primaryKey().defaultRandom(),
     userId: uuid("user_id").references(() => users.id, { onDelete: "cascade" }),
     type: commitmentType().notNull(),
     frequency: workoutFrequency().notNull(),
@@ -92,7 +91,7 @@ export const commitments = pgTable(
 export const commitmentSessions = pgTable("commitment_sessions", {
   id: uuid().primaryKey().defaultRandom(),
   userId: uuid("user_id").references(() => users.id, { onDelete: "cascade" }),
-  commitmentId: integer("commitment_id").references(() => commitments.id, { onDelete: "cascade" }),
+  commitmentId: uuid("commitment_id").references(() => commitments.id, { onDelete: "cascade" }),
   startDate: timestamp("start_date", { withTimezone: true }).notNull().defaultNow(),
   endDate: timestamp("end_date", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
@@ -165,7 +164,7 @@ export const transactions = pgTable(
   {
     id: uuid().primaryKey().defaultRandom(),
     userId: uuid("user_id").references(() => users.id, { onDelete: "cascade" }),
-    commitmentId: integer("commitment_id")
+    commitmentId: uuid("commitment_id")
       .notNull()
       .references(() => commitments.id, { onDelete: "cascade" }),
     transactionType: transactionType("transaction_type").notNull(),

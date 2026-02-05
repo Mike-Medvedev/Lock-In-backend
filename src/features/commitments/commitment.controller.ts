@@ -34,10 +34,9 @@ export const CommitmentController = {
 
   async createCommitment(req: Request, res: Response, next: NextFunction) {
     try {
+      const userId = req.user!.id;
       const body = req.body as CreateCommitment;
-      const commitment = await commitmentService.createCommitment({
-        ...body,
-      });
+      const commitment = await commitmentService.createCommitment(userId, body);
       res.success(commitment, 201);
     } catch (error) {
       next(error);
@@ -46,9 +45,9 @@ export const CommitmentController = {
 
   async updateCommitment(req: Request, res: Response, next: NextFunction) {
     try {
-      const id = validateIdParams(req.params);
+      const commitmentId = validateIdParams(req.params);
       const body = req.body as UpdateCommitment;
-      const commitment = await commitmentService.updateCommitment(id, req.user!.id, body);
+      const commitment = await commitmentService.updateCommitment(commitmentId, req.user!.id, body);
       res.success(commitment);
     } catch (error) {
       next(error);
@@ -59,7 +58,7 @@ export const CommitmentController = {
     try {
       const id = validateIdParams(req.params);
       await commitmentService.deleteCommitment(id, req.user!.id);
-      res.sendStatus(200);
+      res.success(true, 200);
     } catch (error) {
       next(error);
     }

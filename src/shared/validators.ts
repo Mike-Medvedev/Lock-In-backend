@@ -1,12 +1,12 @@
 import { z } from "zod";
 import type { ParamsDictionary } from "express-serve-static-core";
 
-export const IdParamsSchema = z.object({ id: z.coerce.number().int().positive() }).loose();
+export const IdParamsSchema = z.object({ id: z.uuid() }).loose();
 
-export function validateIdParams(params: ParamsDictionary): number {
+export function validateIdParams(params: ParamsDictionary): string {
   const result = IdParamsSchema.safeParse(params);
   if (!result.success) {
     throw result.error;
   }
-  return result.data.id; // returns number directly
+  return result.data.id;
 }
