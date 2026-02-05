@@ -26,7 +26,11 @@ export const CreateCommitmentModel = createInsertSchema(commitments, {
   .omit({ userId: true })
   .strict();
 
-export const UpdateCommitmentModel = createUpdateSchema(commitments).strict();
+export const UpdateCommitmentModel = createUpdateSchema(commitments)
+  .pick({
+    status: true,
+  })
+  .strict();
 
 export const CommitmentsArray = z.array(CommitmentModel);
 

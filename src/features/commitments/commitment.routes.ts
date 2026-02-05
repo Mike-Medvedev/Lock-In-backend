@@ -81,7 +81,7 @@ CommitmentRouter.delete(
   "/:id",
   {
     params: IdParamsSchema,
-    response: z.number(),
+    response: z.boolean(),
     summary: "Delete a commitment",
   },
   CommitmentController.deleteCommitment,
