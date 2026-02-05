@@ -2,7 +2,7 @@
   "semi": true,
   "jsxSingleQuote": false,
   "quoteProps": "as-needed",
-  "jsxBracketSameLine": true,
+  "bracketSameLine": true,
   "arrowParens": "always",
   "tabWidth": 2,
   "useTabs": false,
@@ -10,6 +10,5 @@
   "endOfLine": "auto",
   "trailingComma": "all",
   "bracketSpacing": true,
-  "arrowSpacing": true,
   "embeddedLanguageFormatting": "auto"
 }
