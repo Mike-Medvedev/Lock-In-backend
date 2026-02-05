@@ -14,4 +14,3 @@ export const CommitmentTypeEnum = createSelectSchema(commitmentTypeEnum);
 export const FrequencyEnum = createSelectSchema(frequencyEnum);
 export const DurationEnum = createSelectSchema(durationEnum);
 export const TransactionTypeEnum = createSelectSchema(transactionTypeEnum);
-//comment
