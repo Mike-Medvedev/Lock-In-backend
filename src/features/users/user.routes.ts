@@ -4,6 +4,7 @@ import { validatePayload, validateUser } from "@/middleware/type-validation.midd
 import { CreateUserModel } from "./user.model.ts";
 
 const UserRouter = express.Router();
+
 UserRouter.get("/", validateUser, UserController.selectUser);
 
 UserRouter.post("/", validateUser, validatePayload(CreateUserModel), UserController.createUser);

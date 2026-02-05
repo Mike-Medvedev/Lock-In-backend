@@ -1,5 +1,6 @@
 import { z } from "zod";
-import logger from "@/infra/logger";
+import logger from "@/infra/logger/logger";
+
 const envSchema = z.object({
   NODE_ENV: z.enum(["development", "production", "test"]).default("development"),
   PORT: z.coerce.number().default(3000),
@@ -18,4 +19,4 @@ if (!parsed.success) {
   process.exit(1);
 }
 
-export const env = parsed.data;
+export const config = parsed.data;

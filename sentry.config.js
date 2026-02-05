@@ -1,9 +1,9 @@
 import * as Sentry from "@sentry/node";
-import { env } from "@/infra/env";
+import { config } from "@/infra/config/config";
 
 Sentry.init({
-  dsn: env.SENTRY_KEY,
-  environment: env.NODE_ENV || "development",
+  dsn: config.SENTRY_KEY,
+  environment: config.NODE_ENV || "development",
   enableLogs: true,
   sendDefaultPii: true,
 });

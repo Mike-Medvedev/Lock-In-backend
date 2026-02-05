@@ -1,4 +1,4 @@
-import logger from "@/infra/logger.ts";
+import logger from "@/infra/logger/logger";
 import { client as db } from "@/infra/db/db.ts";
 import type { Server } from "http";
 

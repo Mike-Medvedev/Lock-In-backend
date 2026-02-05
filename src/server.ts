@@ -1,5 +1,5 @@
 import "dotenv/config";
-import { env } from "@/infra/env.ts";
+import { config } from "@/infra/config/config";
 import "@root/sentry.config.js";
 import express, { json } from "express";
 import cors from "cors";
@@ -8,12 +8,13 @@ import UserRouter from "@/features/users/user.routes.ts";
 import TransactionRouter from "@/features/transactions/transaction.routes.ts";
 import CommitmentRouter from "@/features/commitments/commitment.routes.ts";
 import errorHandler from "@/middleware/error.middleware.ts";
-import logger from "@/infra/logger.ts";
+import logger from "@/infra/logger/logger";
 import helmet from "helmet";
+import compression from "compression";
 import gracefulShutdown from "@/shutdown.ts";
 import { limiter } from "@/middleware/rate-limit.middleware.ts";
 
-const allowedOrigins = env.origins;
+const allowedOrigins = config.origins;
 
 if (!allowedOrigins || allowedOrigins.length === 0) {
   logger.error("Failed to start: CORS origins environment variable is missing or empty");
@@ -39,16 +40,22 @@ const corsOptions = {
 
 const app = express();
 
-// Apply the rate limiting middleware to all requests.
-app.use(helmet());
-app.use(cors(corsOptions));
-app.use(json());
+// Apply middleware
 app.use(requestLogger);
+app.use(helmet());
+app.use(compression({ threshold: "1kb" })); // Only compress responses > 1kb
+app.use(cors(corsOptions));
+app.use(json({ limit: "100kb" }));
 app.use(limiter);
 
 app.use("/users", UserRouter);
 app.use("/transactions", TransactionRouter);
 app.use("/commitments", CommitmentRouter);
+
+app.get("/test-compression", (_, res) => {
+  const largeData = { items: Array(100).fill({ name: "test", value: 12345 }) };
+  res.json(largeData);
+});
 
 app.get("/", (_, res) => {
   logger.info("Logging");
@@ -64,6 +71,6 @@ app.use(errorHandler);
 const server = app.listen(3000, "0.0.0.0", (): void => {
   logger.info(`Server listening on port ${3000}`);
 });
-if (env.NODE_ENV === "production") {
+if (config.NODE_ENV === "production") {
   gracefulShutdown(server);
 }
