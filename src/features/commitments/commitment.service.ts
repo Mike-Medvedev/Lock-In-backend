@@ -8,6 +8,10 @@ import {
   type CreateCommitment,
   type UpdateCommitment,
 } from "./commitment.model.ts";
+import {
+  DatabaseResourceNotFoundError,
+  UnauthorizedDatabaseRequestError,
+} from "@/shared/errors.ts";
 
 class CommitmentService {
   constructor(private readonly _db: DB) {}
@@ -31,15 +35,13 @@ class CommitmentService {
   async getCommitment(id: number, userId: string): Promise<Commitment> {
     const [commitment] = await this._db.select().from(commitments).where(eq(commitments.id, id));
 
-    const idd = userId;
-    console.log(idd);
-    // if (!commitment) {
-    //   throw new NotFoundError("Commitment", id);
-    // }
+    if (!commitment) {
+      throw new DatabaseResourceNotFoundError();
+    }
 
-    // if (commitment.userId !== userId) {
-    //   throw new ForbiddenError("You do not have access to this commitment");
-    // }
+    if (commitment.userId !== userId) {
+      throw new UnauthorizedDatabaseRequestError();
+    }
 
     return CommitmentModel.parse(commitment);
   }

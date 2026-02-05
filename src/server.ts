@@ -1,6 +1,7 @@
 import "dotenv/config";
 import { config } from "@/infra/config/config";
 import "@root/sentry.config.js";
+import "@root/meebo.config";
 import express, { json } from "express";
 import cors from "cors";
 import { requestLogger } from "@/middleware/logger.middleware.ts";

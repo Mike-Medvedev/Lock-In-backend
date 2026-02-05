@@ -18,7 +18,7 @@ const logger = createLogger({
       const requestContext =
         requestId && method && path ? ` ${chalk.blue(`[${requestId} ${method} ${path}]`)}` : "";
 
-      const loggerMetadata = Object.keys(meta).length ? ` ${JSON.stringify(meta)}` : "";
+      const loggerMetadata = Object.keys(meta).length ? `\n${JSON.stringify(meta, null, 2)}` : "";
 
       return `${timestamp} ${level}:${requestContext} ${message}${loggerMetadata}${stack ? "\n" + stack : ""}`;
     }),

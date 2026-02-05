@@ -22,7 +22,12 @@ CommitmentRouter.use(validateUser);
 CommitmentRouter.get(
   "/",
   {
-    response: SuccessSchema(CommitmentsArray),
+    responses: {
+      200: SuccessSchema(CommitmentsArray),
+      400: ErrorSchema,
+      401: ErrorSchema,
+      500: ErrorSchema,
+    },
     summary: "List all commitments",
   },
   CommitmentController.getCommitments,

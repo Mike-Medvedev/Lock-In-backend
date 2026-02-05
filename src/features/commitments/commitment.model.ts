@@ -16,7 +16,14 @@ export const SessionGoalEnum = createSelectSchema(sessionGoalType);
 export const CommitmentStatusEnum = createSelectSchema(commitmentStatus);
 
 export const CommitmentModel = createSelectSchema(commitments);
-export const CreateCommitmentModel = createInsertSchema(commitments);
+export const CreateCommitmentModel = createInsertSchema(commitments, {
+  startDate: z.coerce.date(),
+  endDate: z.coerce.date(),
+  createdAt: z.coerce.date(),
+  gracePeriodEndsAt: z.coerce.date(),
+})
+  .omit({ userId: true })
+  .strict();
 export const UpdateCommitmentModel = createUpdateSchema(commitments);
 export const CommitmentsArray = z.array(CommitmentModel);
 
