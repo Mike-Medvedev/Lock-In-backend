@@ -11,91 +11,123 @@ import {
   index,
   uuid,
   text,
+  date,
 } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
 
-export const commitmentTypeEnum = pgEnum("commitment_type", ["walk", "run", "sleep", "screentime"]);
+// ==================== ENUMS ====================
 
-export const frequencyEnum = pgEnum("frequency", [
-  "three_times_a_Week",
-  "four_times_a_Week",
-  "five_times_a_week",
-  "six_times_a_week",
-  "seven_times_a_week",
-]);
+export const commitmentType = pgEnum("commitment_type", ["walk", "run", "sleep", "screentime"]);
 
-export const durationEnum = pgEnum("duration", [
+export const commitmentDuration = pgEnum("commitment_duration", [
   "one_weeks",
   "two_weeks",
   "three_weeks",
   "four_weeks",
 ]);
 
-export const transactionTypeEnum = pgEnum("transaction_type", [
-  "stake",
-  "payout",
-  "forfeit",
-  "rake",
+export const workoutFrequency = pgEnum("workout_frequency", [
+  "three_times_a_week",
+  "four_times_a_week",
+  "five_times_a_week",
+  "six_times_a_week",
+  "seven_times_a_week",
 ]);
+
+export const sessionGoalType = pgEnum("session_goal_type", [
+  "steps",
+  "miles",
+  "screen_time",
+  "sleep_time",
+]);
+
+export const commitmentStatus = pgEnum("commitment_status", [
+  "pending_grace_period",
+  "active",
+  "completed",
+  "forfeited",
+  "cancelled",
+]);
+
+export const sessionStatus = pgEnum("session_status", [
+  "not_started",
+  "in_progress",
+  "paused",
+  "completed",
+  "verification_pending",
+  "verification_failed",
+  "verification_succeeded",
+]);
+
+export const transactionType = pgEnum("transaction_type", ["stake", "payout", "forfeit", "rake"]);
+
+// ==================== TABLES ====================
 
 export const users = pgTable("users", {
   id: uuid().primaryKey(), // UUID from Supabase Auth - no default, you provide it
   firstName: varchar("first_name"),
   lastName: varchar("last_name"),
-  phone: varchar("phone").unique(), // optional - user signs in with phone OR email
-  email: text().unique(), // optional - user signs in with phone OR email
+  phone: varchar("phone").unique(),
+  email: text().unique(),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
 export const commitments = pgTable(
-  "commitment",
+  "commitments",
   {
     id: integer().primaryKey().generatedAlwaysAsIdentity(),
     userId: uuid("user_id").references(() => users.id, { onDelete: "cascade" }),
-    type: commitmentTypeEnum().notNull(),
-    frequency: frequencyEnum().notNull(),
-    duration: durationEnum().notNull(),
+    type: commitmentType().notNull(),
+    frequency: workoutFrequency().notNull(),
+    duration: commitmentDuration().notNull(),
+    sessionGoal: sessionGoalType("session_goal").notNull(),
     startDate: timestamp("start_date", { withTimezone: true }).notNull().defaultNow(),
     endDate: timestamp("end_date", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-    stakeAmount: bigint("stake_amount", { mode: "number" }).notNull(),
+    stakeAmount: bigint("stake_amount", { mode: "number" }).notNull(), // 50-10000 cents
+    lockedBonusAmount: bigint("locked_bonus_amount", { mode: "number" }).notNull().default(0),
+    status: commitmentStatus().notNull().default("pending_grace_period"),
+    gracePeriodEndsAt: timestamp("grace_period_ends_at", { withTimezone: true }).notNull(), // createdAt + 1 day
+    isRefundable: boolean("is_refundable").notNull().default(true), // Derived: current time < gracePeriodEndsAt
   },
-  (table) => [check("age_check1", sql`${table.stakeAmount} between 1 and 10000`)],
+  (table) => [check("stake_amount_check", sql`${table.stakeAmount} between 50 and 10000`)],
 );
 
-export const commitmentSessions = pgTable("commitment_session", {
-  id: integer().primaryKey().generatedAlwaysAsIdentity(),
+export const commitmentSessions = pgTable("commitment_sessions", {
+  id: uuid().primaryKey().defaultRandom(),
   userId: uuid("user_id").references(() => users.id, { onDelete: "cascade" }),
   commitmentId: integer("commitment_id").references(() => commitments.id, { onDelete: "cascade" }),
   startDate: timestamp("start_date", { withTimezone: true }).notNull().defaultNow(),
   endDate: timestamp("end_date", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-  sessionDuration: bigint("session_duration", { mode: "number" }).notNull().default(0),
-  paused: boolean("paused").default(false),
-  completed: boolean("completed").default(false),
-  verified: boolean("verified").default(false),
-  stepCount: integer("step_count"),
-  distance: doublePrecision(),
-  maxSpeed: doublePrecision(),
+  completedAt: timestamp("completed_at", { withTimezone: true }),
+  countingDay: date("counting_day").notNull(), // The day (in user's timezone) this session counts toward
+  sessionDuration: doublePrecision("session_duration").notNull().default(0),
+  sessionStatus: sessionStatus("session_status").notNull().default("not_started"),
+  sessionGoal: sessionGoalType("session_goal").notNull(),
+  actualValue: doublePrecision("actual_value"), // Actual steps, miles, etc. achieved
+  flaggedForReview: boolean("flagged_for_review").notNull().default(false),
+  fraudDetected: boolean("fraud_detected").notNull().default(false),
+  reviewNotes: text("review_notes"),
 });
 
 export const motionSamples = pgTable(
   "motion_samples",
   {
-    id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
-    sessionId: integer("session_id")
+    id: uuid().primaryKey().defaultRandom(),
+    commitmentSessionId: uuid("commitment_session_id")
       .notNull()
       .references(() => commitmentSessions.id, { onDelete: "cascade" }),
     capturedAt: timestamp("captured_at", { withTimezone: true }).notNull(),
-    intervalMs: integer("interval_ms"),
+    intervalMs: doublePrecision("interval_ms"),
 
     // Acceleration (m/s^2) without gravity
     accelX: doublePrecision("accel_x"),
     accelY: doublePrecision("accel_y"),
     accelZ: doublePrecision("accel_z"),
 
-    // Acceleration including gravity (optional)
+    // Acceleration including gravity
     accelGX: doublePrecision("accel_gx"),
     accelGY: doublePrecision("accel_gy"),
     accelGZ: doublePrecision("accel_gz"),
@@ -110,16 +142,16 @@ export const motionSamples = pgTable(
     rotRateBeta: doublePrecision("rot_rate_beta"),
     rotRateGamma: doublePrecision("rot_rate_gamma"),
 
-    orientation: integer("orientation"),
+    orientation: doublePrecision("orientation"),
   },
-  (t) => [index("motion_session_time_idx").on(t.sessionId, t.capturedAt)],
+  (t) => [index("motion_session_time_idx").on(t.commitmentSessionId, t.capturedAt)],
 );
 
 export const gpsSamples = pgTable(
   "gps_samples",
   {
-    id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
-    sessionId: integer("session_id")
+    id: uuid().primaryKey().defaultRandom(),
+    commitmentSessionId: uuid("commitment_session_id")
       .notNull()
       .references(() => commitmentSessions.id, { onDelete: "cascade" }),
     capturedAt: timestamp("captured_at", { withTimezone: true }).notNull(),
@@ -128,24 +160,32 @@ export const gpsSamples = pgTable(
     lng: doublePrecision().notNull(),
     speedMps: doublePrecision("speed_mps"),
     headingDeg: doublePrecision("heading_deg"),
-    horizAcc: doublePrecision("horiz_acc"), //accuracy in lat/lng readings in meters
+    horizAcc: doublePrecision("horiz_acc"), // accuracy in lat/lng readings in meters
   },
-  (t) => [index("gps_session_time_idx").on(t.sessionId, t.capturedAt)],
+  (t) => [index("gps_session_time_idx").on(t.commitmentSessionId, t.capturedAt)],
 );
 
 export const transactions = pgTable(
   "transactions",
   {
-    id: uuid().defaultRandom().primaryKey(),
+    id: uuid().primaryKey().defaultRandom(),
     userId: uuid("user_id").references(() => users.id, { onDelete: "cascade" }),
     commitmentId: integer("commitment_id")
       .notNull()
       .references(() => commitments.id, { onDelete: "cascade" }),
-    transactionType: transactionTypeEnum().notNull(),
+    transactionType: transactionType("transaction_type").notNull(),
     stripeCustomerId: text("stripe_customer_id").notNull(),
     stripeTransactionId: text("stripe_transaction_id").notNull(),
-    amount: bigint("stake_amount", { mode: "number" }).notNull(),
+    amount: bigint("amount", { mode: "number" }).notNull(), // > 50 cents
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
-  (table) => [check("transaction_amount_validation", sql`${table.amount} > 50`)],
+  (table) => [check("transaction_amount_check", sql`${table.amount} > 50`)],
 );
+
+export const pool = pgTable("pool", {
+  id: uuid().primaryKey().defaultRandom(),
+  balance: doublePrecision("balance").notNull().default(0), // Running balance in dollars
+  totalRakeCollected: doublePrecision("total_rake_collected").notNull().default(0), // 20% of all forfeitures
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});

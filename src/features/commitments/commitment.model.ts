@@ -1,16 +1,16 @@
 import { createSelectSchema } from "drizzle-zod";
 import {
   commitments,
-  commitmentTypeEnum,
-  frequencyEnum,
-  durationEnum,
-  transactionTypeEnum,
-  commitmentSessions,
+  commitmentType,
+  workoutFrequency,
+  commitmentDuration,
+  sessionGoalType,
+  commitmentStatus,
 } from "@/infra/db/schema.ts";
 
 export const CommitmentModel = createSelectSchema(commitments);
-export const CommitmentSessionModel = createSelectSchema(commitmentSessions);
-export const CommitmentTypeEnum = createSelectSchema(commitmentTypeEnum);
-export const FrequencyEnum = createSelectSchema(frequencyEnum);
-export const DurationEnum = createSelectSchema(durationEnum);
-export const TransactionTypeEnum = createSelectSchema(transactionTypeEnum);
+export const CommitmentTypeEnum = createSelectSchema(commitmentType);
+export const WorkoutFrequencyEnum = createSelectSchema(workoutFrequency);
+export const CommitmentDurationEnum = createSelectSchema(commitmentDuration);
+export const SessionGoalEnum = createSelectSchema(sessionGoalType);
+export const CommitmentStatusEnum = createSelectSchema(commitmentStatus);

@@ -1,29 +1,19 @@
 {
-  "id": "78b4fc25-ae70-40a1-ba43-4a36a159d49f",
+  "id": "3ee113a9-f683-4a78-9889-6e3e1c8a40c4",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
-    "public.commitment_session": {
-      "name": "commitment_session",
+    "public.commitment_sessions": {
+      "name": "commitment_sessions",
       "schema": "",
       "columns": {
         "id": {
           "name": "id",
-          "type": "integer",
+          "type": "uuid",
           "primaryKey": true,
           "notNull": true,
-          "identity": {
-            "type": "always",
-            "name": "commitment_session_id_seq",
-            "schema": "public",
-            "increment": "1",
-            "startWith": "1",
-            "minValue": "1",
-            "maxValue": "2147483647",
-            "cache": "1",
-            "cycle": false
-          }
+          "default": "gen_random_uuid()"
         },
         "user_id": {
           "name": "user_id",
@@ -57,68 +47,82 @@
           "notNull": true,
           "default": "now()"
         },
+        "completed_at": {
+          "name": "completed_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "counting_day": {
+          "name": "counting_day",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": true
+        },
         "session_duration": {
           "name": "session_duration",
-          "type": "bigint",
+          "type": "double precision",
           "primaryKey": false,
           "notNull": true,
           "default": 0
         },
-        "paused": {
-          "name": "paused",
-          "type": "boolean",
+        "session_status": {
+          "name": "session_status",
+          "type": "session_status",
+          "typeSchema": "public",
           "primaryKey": false,
-          "notNull": false,
-          "default": false
+          "notNull": true,
+          "default": "'not_started'"
         },
-        "completed": {
-          "name": "completed",
-          "type": "boolean",
+        "session_goal": {
+          "name": "session_goal",
+          "type": "session_goal_type",
+          "typeSchema": "public",
           "primaryKey": false,
-          "notNull": false,
-          "default": false
+          "notNull": true
         },
-        "verified": {
-          "name": "verified",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": false,
-          "default": false
-        },
-        "step_count": {
-          "name": "step_count",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "distance": {
-          "name": "distance",
+        "actual_value": {
+          "name": "actual_value",
           "type": "double precision",
           "primaryKey": false,
           "notNull": false
         },
-        "maxSpeed": {
-          "name": "maxSpeed",
-          "type": "double precision",
+        "flagged_for_review": {
+          "name": "flagged_for_review",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "fraud_detected": {
+          "name": "fraud_detected",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "review_notes": {
+          "name": "review_notes",
+          "type": "text",
           "primaryKey": false,
           "notNull": false
         }
       },
       "indexes": {},
       "foreignKeys": {
-        "commitment_session_user_id_users_id_fk": {
-          "name": "commitment_session_user_id_users_id_fk",
-          "tableFrom": "commitment_session",
+        "commitment_sessions_user_id_users_id_fk": {
+          "name": "commitment_sessions_user_id_users_id_fk",
+          "tableFrom": "commitment_sessions",
           "tableTo": "users",
           "columnsFrom": ["user_id"],
           "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
-        "commitment_session_commitment_id_commitment_id_fk": {
-          "name": "commitment_session_commitment_id_commitment_id_fk",
-          "tableFrom": "commitment_session",
-          "tableTo": "commitment",
+        "commitment_sessions_commitment_id_commitments_id_fk": {
+          "name": "commitment_sessions_commitment_id_commitments_id_fk",
+          "tableFrom": "commitment_sessions",
+          "tableTo": "commitments",
           "columnsFrom": ["commitment_id"],
           "columnsTo": ["id"],
           "onDelete": "cascade",
@@ -131,8 +135,8 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
-    "public.commitment": {
-      "name": "commitment",
+    "public.commitments": {
+      "name": "commitments",
       "schema": "",
       "columns": {
         "id": {
@@ -142,7 +146,7 @@
           "notNull": true,
           "identity": {
             "type": "always",
-            "name": "commitment_id_seq",
+            "name": "commitments_id_seq",
             "schema": "public",
             "increment": "1",
             "startWith": "1",
@@ -167,14 +171,21 @@
         },
         "frequency": {
           "name": "frequency",
-          "type": "frequency",
+          "type": "workout_frequency",
           "typeSchema": "public",
           "primaryKey": false,
           "notNull": true
         },
         "duration": {
           "name": "duration",
-          "type": "duration",
+          "type": "commitment_duration",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "session_goal": {
+          "name": "session_goal",
+          "type": "session_goal_type",
           "typeSchema": "public",
           "primaryKey": false,
           "notNull": true
@@ -204,13 +215,41 @@
           "type": "bigint",
           "primaryKey": false,
           "notNull": true
+        },
+        "locked_bonus_amount": {
+          "name": "locked_bonus_amount",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "status": {
+          "name": "status",
+          "type": "commitment_status",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'pending_grace_period'"
+        },
+        "grace_period_ends_at": {
+          "name": "grace_period_ends_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "is_refundable": {
+          "name": "is_refundable",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": true
         }
       },
       "indexes": {},
       "foreignKeys": {
-        "commitment_user_id_users_id_fk": {
-          "name": "commitment_user_id_users_id_fk",
-          "tableFrom": "commitment",
+        "commitments_user_id_users_id_fk": {
+          "name": "commitments_user_id_users_id_fk",
+          "tableFrom": "commitments",
           "tableTo": "users",
           "columnsFrom": ["user_id"],
           "columnsTo": ["id"],
@@ -222,9 +261,9 @@
       "uniqueConstraints": {},
       "policies": {},
       "checkConstraints": {
-        "age_check1": {
-          "name": "age_check1",
-          "value": "\"commitment\".\"stake_amount\" between 1 and 10000"
+        "stake_amount_check": {
+          "name": "stake_amount_check",
+          "value": "\"commitments\".\"stake_amount\" between 50 and 10000"
         }
       },
       "isRLSEnabled": false
@@ -235,24 +274,14 @@
       "columns": {
         "id": {
           "name": "id",
-          "type": "integer",
+          "type": "uuid",
           "primaryKey": true,
           "notNull": true,
-          "identity": {
-            "type": "always",
-            "name": "gps_samples_id_seq",
-            "schema": "public",
-            "increment": "1",
-            "startWith": "1",
-            "minValue": "1",
-            "maxValue": "2147483647",
-            "cache": "1",
-            "cycle": false
-          }
+          "default": "gen_random_uuid()"
         },
-        "session_id": {
-          "name": "session_id",
-          "type": "integer",
+        "commitment_session_id": {
+          "name": "commitment_session_id",
+          "type": "uuid",
           "primaryKey": false,
           "notNull": true
         },
@@ -298,7 +327,7 @@
           "name": "gps_session_time_idx",
           "columns": [
             {
-              "expression": "session_id",
+              "expression": "commitment_session_id",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -317,11 +346,11 @@
         }
       },
       "foreignKeys": {
-        "gps_samples_session_id_commitment_session_id_fk": {
-          "name": "gps_samples_session_id_commitment_session_id_fk",
+        "gps_samples_commitment_session_id_commitment_sessions_id_fk": {
+          "name": "gps_samples_commitment_session_id_commitment_sessions_id_fk",
           "tableFrom": "gps_samples",
-          "tableTo": "commitment_session",
-          "columnsFrom": ["session_id"],
+          "tableTo": "commitment_sessions",
+          "columnsFrom": ["commitment_session_id"],
           "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
@@ -339,24 +368,14 @@
       "columns": {
         "id": {
           "name": "id",
-          "type": "integer",
+          "type": "uuid",
           "primaryKey": true,
           "notNull": true,
-          "identity": {
-            "type": "always",
-            "name": "motion_samples_id_seq",
-            "schema": "public",
-            "increment": "1",
-            "startWith": "1",
-            "minValue": "1",
-            "maxValue": "2147483647",
-            "cache": "1",
-            "cycle": false
-          }
+          "default": "gen_random_uuid()"
         },
-        "session_id": {
-          "name": "session_id",
-          "type": "integer",
+        "commitment_session_id": {
+          "name": "commitment_session_id",
+          "type": "uuid",
           "primaryKey": false,
           "notNull": true
         },
@@ -368,7 +387,7 @@
         },
         "interval_ms": {
           "name": "interval_ms",
-          "type": "integer",
+          "type": "double precision",
           "primaryKey": false,
           "notNull": false
         },
@@ -446,7 +465,7 @@
         },
         "orientation": {
           "name": "orientation",
-          "type": "integer",
+          "type": "double precision",
           "primaryKey": false,
           "notNull": false
         }
@@ -456,7 +475,7 @@
           "name": "motion_session_time_idx",
           "columns": [
             {
-              "expression": "session_id",
+              "expression": "commitment_session_id",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -475,16 +494,64 @@
         }
       },
       "foreignKeys": {
-        "motion_samples_session_id_commitment_session_id_fk": {
-          "name": "motion_samples_session_id_commitment_session_id_fk",
+        "motion_samples_commitment_session_id_commitment_sessions_id_fk": {
+          "name": "motion_samples_commitment_session_id_commitment_sessions_id_fk",
           "tableFrom": "motion_samples",
-          "tableTo": "commitment_session",
-          "columnsFrom": ["session_id"],
+          "tableTo": "commitment_sessions",
+          "columnsFrom": ["commitment_session_id"],
           "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
       },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.pool": {
+      "name": "pool",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "balance": {
+          "name": "balance",
+          "type": "double precision",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "total_rake_collected": {
+          "name": "total_rake_collected",
+          "type": "double precision",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
       "policies": {},
@@ -514,8 +581,8 @@
           "primaryKey": false,
           "notNull": true
         },
-        "transactionType": {
-          "name": "transactionType",
+        "transaction_type": {
+          "name": "transaction_type",
           "type": "transaction_type",
           "typeSchema": "public",
           "primaryKey": false,
@@ -533,8 +600,8 @@
           "primaryKey": false,
           "notNull": true
         },
-        "stake_amount": {
-          "name": "stake_amount",
+        "amount": {
+          "name": "amount",
           "type": "bigint",
           "primaryKey": false,
           "notNull": true
@@ -558,10 +625,10 @@
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
-        "transactions_commitment_id_commitment_id_fk": {
-          "name": "transactions_commitment_id_commitment_id_fk",
+        "transactions_commitment_id_commitments_id_fk": {
+          "name": "transactions_commitment_id_commitments_id_fk",
           "tableFrom": "transactions",
-          "tableTo": "commitment",
+          "tableTo": "commitments",
           "columnsFrom": ["commitment_id"],
           "columnsTo": ["id"],
           "onDelete": "cascade",
@@ -572,9 +639,9 @@
       "uniqueConstraints": {},
       "policies": {},
       "checkConstraints": {
-        "transaction_amount_validation": {
-          "name": "transaction_amount_validation",
-          "value": "\"transactions\".\"stake_amount\" > 50"
+        "transaction_amount_check": {
+          "name": "transaction_amount_check",
+          "value": "\"transactions\".\"amount\" > 50"
         }
       },
       "isRLSEnabled": false
@@ -649,31 +716,54 @@
     }
   },
   "enums": {
+    "public.commitment_duration": {
+      "name": "commitment_duration",
+      "schema": "public",
+      "values": ["one_weeks", "two_weeks", "three_weeks", "four_weeks"]
+    },
+    "public.commitment_status": {
+      "name": "commitment_status",
+      "schema": "public",
+      "values": ["pending_grace_period", "active", "completed", "forfeited", "cancelled"]
+    },
     "public.commitment_type": {
       "name": "commitment_type",
       "schema": "public",
       "values": ["walk", "run", "sleep", "screentime"]
     },
-    "public.duration": {
-      "name": "duration",
+    "public.session_goal_type": {
+      "name": "session_goal_type",
       "schema": "public",
-      "values": ["one_weeks", "two_weeks", "three_weeks", "four_weeks"]
+      "values": ["steps", "miles", "screen_time", "sleep_time"]
     },
-    "public.frequency": {
-      "name": "frequency",
+    "public.session_status": {
+      "name": "session_status",
       "schema": "public",
       "values": [
-        "three_times_a_Week",
-        "four_times_a_Week",
-        "five_times_a_week",
-        "six_times_a_week",
-        "seven_times_a_week"
+        "not_started",
+        "in_progress",
+        "paused",
+        "completed",
+        "verification_pending",
+        "verification_failed",
+        "verification_succeeded"
       ]
     },
     "public.transaction_type": {
       "name": "transaction_type",
       "schema": "public",
       "values": ["stake", "payout", "forfeit", "rake"]
+    },
+    "public.workout_frequency": {
+      "name": "workout_frequency",
+      "schema": "public",
+      "values": [
+        "three_times_a_week",
+        "four_times_a_week",
+        "five_times_a_week",
+        "six_times_a_week",
+        "seven_times_a_week"
+      ]
     }
   },
   "schemas": {},

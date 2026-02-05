@@ -1,3 +1,5 @@
+## API Design
+
 1. Logging + Observability ✅
 2. Error Handling ✅
 3. State ❌
