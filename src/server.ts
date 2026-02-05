@@ -5,10 +5,10 @@ import cors from "cors";
 import { requestLogger } from "./middleware/logger.middleware.ts";
 import { UserRouter, TransactionRouter, CommitmentRouter } from "./routes/index.ts";
 import errorHandler from "./middleware/error.middleware.ts";
-import logger from "./logger/logger.ts";
+import logger from "./infra/logger.ts";
 import helmet from "helmet";
 import gracefulShutdown from "./shutdown.ts";
-import { env } from "@/settings/env.ts";
+import { env } from "@/infra/env.ts";
 
 const allowedOrigins = env.origins;
 

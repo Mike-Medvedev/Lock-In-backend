@@ -1,5 +1,5 @@
 import * as Sentry from "@sentry/node";
-import { env } from "@/settings/env.ts";
+import { env } from "@/infra/env";
 
 Sentry.init({
   dsn: env.SENTRY_KEY,

@@ -1,12 +1,12 @@
 import { eq } from "drizzle-orm";
-import { db, type DB } from "../db/db.ts";
-import { users } from "../db/schema.ts";
+import { db, type DB } from "../../infra/db/db.ts";
+import { users } from "../../infra/db/schema.ts";
 import {
   CreateUserModel,
   SelectUserModel,
   type CreateUser,
   type SelectUser,
-} from "../models/user.model.ts";
+} from "./user.model.ts";
 
 class UserService {
   constructor(private readonly _db: DB) {}

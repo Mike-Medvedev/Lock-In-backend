@@ -1,5 +1,5 @@
-import logger from "./logger/logger";
-import { client as db } from "./db/db";
+import logger from "./infra/logger";
+import { client as db } from "./infra/db/db";
 import type { Server } from "http";
 
 export default function gracefulShutdown(server: Server) {

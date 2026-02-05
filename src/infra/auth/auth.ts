@@ -1,5 +1,5 @@
 import { AuthInvalidTokenResponseError, createClient, type User } from "@supabase/supabase-js";
-import { env } from "@/settings/env.ts";
+import { env } from "@/infra/env";
 
 // Create a single supabase client for interacting with your database
 const supabase = createClient(env.SUPABASE_PROJECT_URL, env.SUPABASE_PUBLISHABLE_KEY);

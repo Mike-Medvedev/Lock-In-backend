@@ -1,7 +1,7 @@
 import express from "express";
-import * as UserController from "../controllers/user.controller.ts";
-import { validatePayload, validateUser } from "@/middleware/validate-payload.middleware.ts";
-import { CreateUserModel } from "../models/user.model.ts";
+import * as UserController from "./user.controller.ts";
+import { validatePayload, validateUser } from "@/middleware/validation-middleware.ts";
+import { CreateUserModel } from "./user.model.ts";
 
 const UserRouter = express.Router();
 UserRouter.get("/", validateUser, UserController.selectUser);

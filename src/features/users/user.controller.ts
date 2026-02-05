@@ -1,7 +1,7 @@
 import type { Request, Response } from "express";
-import { type CreateUser } from "../models/user.model.ts";
-import { userService } from "../services/user.service.ts";
-import { MissingUserFromRequest } from "@/errors/errors.ts";
+import { type CreateUser } from "./user.model.ts";
+import { userService } from "./user.service.ts";
+import { MissingUserFromRequest } from "@/lib/errors.ts";
 
 export const createUser = async (req: Request, res: Response) => {
   req.log.info("Creating User");

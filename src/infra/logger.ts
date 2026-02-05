@@ -1,9 +1,13 @@
 import { createLogger, transports, format } from "winston";
 import chalk from "chalk";
+import Transport from "winston-transport";
+import * as Sentry from "@sentry/node";
+
+const SentryWinstonTransport = Sentry.createSentryWinstonTransport(Transport);
 
 const logger = createLogger({
   level: "info",
-  transports: [new transports.Console()],
+  transports: [new transports.Console(), new SentryWinstonTransport()],
   format: format.combine(
     format.errors({ stack: true }),
     format.timestamp(),
