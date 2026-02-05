@@ -1,6 +1,6 @@
 import express from "express";
 import * as UserController from "./user.controller.ts";
-import { validatePayload, validateUser } from "@/middleware/validation-middleware.ts";
+import { validatePayload, validateUser } from "@/middleware/type-validation.middleware.ts";
 import { CreateUserModel } from "./user.model.ts";
 
 const UserRouter = express.Router();

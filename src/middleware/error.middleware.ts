@@ -1,6 +1,6 @@
 import { DrizzleQueryError } from "drizzle-orm/errors";
 import type { ErrorRequestHandler, Request, Response, NextFunction } from "express";
-import { DatabaseError, MissingTokenError, ZodError } from "../lib/errors.ts";
+import { DatabaseError, MissingTokenError, ZodError } from "@/shared/errors.ts";
 import z from "zod";
 import { AuthError } from "@supabase/supabase-js";
 

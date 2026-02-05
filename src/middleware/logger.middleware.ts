@@ -1,6 +1,6 @@
 import { randomUUID } from "crypto";
 import type { Request, Response, NextFunction } from "express";
-import logger from "../infra/logger.ts";
+import logger from "@/infra/logger.ts";
 
 export function requestLogger(req: Request, _res: Response, next: NextFunction) {
   const requestId = randomUUID();

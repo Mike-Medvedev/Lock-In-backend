@@ -6,7 +6,7 @@ import {
   durationEnum,
   transactionTypeEnum,
   commitmentSessions,
-} from "../db/schema.ts";
+} from "@/infra/db/schema.ts";
 
 export const CommitmentModel = createSelectSchema(commitments);
 export const CommitmentSessionModel = createSelectSchema(commitmentSessions);

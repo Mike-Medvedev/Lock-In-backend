@@ -1,6 +1,6 @@
 import { eq } from "drizzle-orm";
-import { db, type DB } from "../../infra/db/db.ts";
-import { users } from "../../infra/db/schema.ts";
+import { db, type DB } from "@/infra/db/db.ts";
+import { users } from "@/infra/db/schema.ts";
 import {
   CreateUserModel,
   SelectUserModel,

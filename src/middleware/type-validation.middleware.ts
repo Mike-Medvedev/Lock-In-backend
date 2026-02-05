@@ -1,7 +1,7 @@
 import { z } from "zod";
 import type { Request, Response, NextFunction } from "express";
-import { verifyUser } from "@/auth/auth.ts";
-import { MissingTokenError } from "@/lib/errors";
+import { verifyUser } from "@/infra/auth/auth.ts";
+import { MissingTokenError } from "@/shared/errors.ts";
 
 export function validatePayload<T extends z.ZodType>(schema: T) {
   return function (req: Request, _res: Response, next: NextFunction) {

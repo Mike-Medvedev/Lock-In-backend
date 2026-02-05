@@ -1,6 +1,6 @@
 import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
-import logger from "../logger.ts";
+import logger from "@/infra/logger.ts";
 import { env } from "@/infra/env.ts";
 
 const connectionString = env.DATABASE_URL;

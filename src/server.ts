@@ -1,14 +1,17 @@
 import "dotenv/config";
-import "../sentry.config.js";
+import { env } from "@/infra/env.ts";
+import "@root/sentry.config.js";
 import express, { json } from "express";
 import cors from "cors";
-import { requestLogger } from "./middleware/logger.middleware.ts";
-import { UserRouter, TransactionRouter, CommitmentRouter } from "./routes/index.ts";
-import errorHandler from "./middleware/error.middleware.ts";
-import logger from "./infra/logger.ts";
+import { requestLogger } from "@/middleware/logger.middleware.ts";
+import UserRouter from "@/features/users/user.routes.ts";
+import TransactionRouter from "@/features/transactions/transaction.routes.ts";
+import CommitmentRouter from "@/features/commitments/commitment.routes.ts";
+import errorHandler from "@/middleware/error.middleware.ts";
+import logger from "@/infra/logger.ts";
 import helmet from "helmet";
-import gracefulShutdown from "./shutdown.ts";
-import { env } from "@/infra/env.ts";
+import gracefulShutdown from "@/shutdown.ts";
+import { limiter } from "@/middleware/rate-limit.middleware.ts";
 
 const allowedOrigins = env.origins;
 
@@ -36,17 +39,19 @@ const corsOptions = {
 
 const app = express();
 
+// Apply the rate limiting middleware to all requests.
 app.use(helmet());
 app.use(cors(corsOptions));
 app.use(json());
 app.use(requestLogger);
+app.use(limiter);
 
 app.use("/users", UserRouter);
 app.use("/transactions", TransactionRouter);
 app.use("/commitments", CommitmentRouter);
 
 app.get("/", (_, res) => {
-  console.log("Logging");
+  logger.info("Logging");
   res.send("Hello World");
 });
 app.get("/health", (_, res) => {
@@ -57,7 +62,7 @@ app.get("/health", (_, res) => {
 app.use(errorHandler);
 
 const server = app.listen(3000, "0.0.0.0", (): void => {
-  console.info(`Server listening on port ${3000}`);
+  logger.info(`Server listening on port ${3000}`);
 });
 if (env.NODE_ENV === "production") {
   gracefulShutdown(server);
