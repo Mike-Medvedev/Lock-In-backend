@@ -12,17 +12,21 @@ import {
   DatabaseResourceNotFoundError,
   UnauthorizedDatabaseRequestError,
 } from "@/shared/errors.ts";
+import { fromNow } from "@/shared/date.ts";
+import { COMMITMENT_DEFAULTS } from "@/shared/constants.ts";
 
 class CommitmentService {
   constructor(private readonly _db: DB) {}
 
-  /** Get all commitments for a user */
+  private getDefaultGracePeriodEnd(): Date {
+    return fromNow(COMMITMENT_DEFAULTS.GRACE_PERIOD_DAYS, "DAY");
+  }
+
   async getCommitments(userId: string): Promise<Commitment[]> {
     const results = await this._db.select().from(commitments).where(eq(commitments.userId, userId));
     return results.map((c) => CommitmentModel.parse(c));
   }
 
-  /** Get active commitments for a user */
   async getActiveCommitments(userId: string): Promise<Commitment[]> {
     const results = await this._db
       .select()
@@ -31,7 +35,6 @@ class CommitmentService {
     return results.map((c) => CommitmentModel.parse(c));
   }
 
-  /** Get a single commitment by id, verifying user ownership */
   async getCommitment(id: number, userId: string): Promise<Commitment> {
     const [commitment] = await this._db.select().from(commitments).where(eq(commitments.id, id));
 
@@ -46,10 +49,8 @@ class CommitmentService {
     return CommitmentModel.parse(commitment);
   }
 
-  /** Create a new commitment */
   async createCommitment(input: CreateCommitment): Promise<Commitment> {
-    // Calculate grace period end (1 day from now) if not provided
-    const gracePeriodEndsAt = input.gracePeriodEndsAt ?? new Date(Date.now() + 24 * 60 * 60 * 1000);
+    const gracePeriodEndsAt = this.getDefaultGracePeriodEnd();
 
     const [commitment] = await this._db
       .insert(commitments)
@@ -62,7 +63,6 @@ class CommitmentService {
     return CommitmentModel.parse(commitment);
   }
 
-  /** Update an existing commitment, verifying user ownership */
   async updateCommitment(id: number, userId: string, input: UpdateCommitment): Promise<Commitment> {
     // First verify the commitment exists and user owns it
     await this.getCommitment(id, userId);
@@ -76,7 +76,6 @@ class CommitmentService {
     return CommitmentModel.parse(updated);
   }
 
-  /** Delete a commitment, verifying user ownership */
   async deleteCommitment(id: number, userId: string): Promise<void> {
     // First verify the commitment exists and user owns it
     await this.getCommitment(id, userId);
