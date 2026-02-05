@@ -15,6 +15,9 @@
     "prepare": "husky"
   },
   "lint-staged": {
+    "*.{ts,tsx}": [
+      "bash -c 'tsc --noEmit'"
+    ],
     "*.{ts,tsx,js,jsx}": [
       "eslint --fix"
     ],

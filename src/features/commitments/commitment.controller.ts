@@ -37,7 +37,6 @@ export const CommitmentController = {
       const body = req.body as CreateCommitment;
       const commitment = await commitmentService.createCommitment({
         ...body,
-        userId: req.user!.id,
       });
       res.success(commitment, 201);
     } catch (error) {
