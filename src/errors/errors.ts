@@ -17,13 +17,16 @@ export class DatabaseError extends Error {
   }
 }
 
-/**
- * Wraps unexpected errors.
- */
-export class UnknownError extends Error {
-  constructor(error: unknown) {
-    const message = error instanceof Error ? error.message : String(error);
-    super(message, { cause: error instanceof Error ? error : undefined });
-    this.name = "UnknownError";
+export class MissingTokenError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "MissingTokenError";
+  }
+}
+
+export class MissingUserFromRequest extends Error {
+  constructor() {
+    super("User missing from request req.user");
+    this.name = "MissingUserFromRequest";
   }
 }

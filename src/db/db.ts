@@ -1,8 +1,9 @@
 import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
 import logger from "../logger/logger.ts";
+import { env } from "@/settings/env.ts";
 
-const connectionString = process.env.DATABASE_URL;
+const connectionString = env.DATABASE_URL;
 if (!connectionString) {
   logger.error("Failed to start: DATABASE_URL environment variable is missing");
   throw new Error("Error reading Database connection string from env vars");

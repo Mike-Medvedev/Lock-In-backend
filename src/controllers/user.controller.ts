@@ -1,11 +1,19 @@
 import type { Request, Response } from "express";
 import { type CreateUser } from "../models/user.model.ts";
 import { userService } from "../services/user.service.ts";
-import logger from "../logger/logger.ts";
+import { MissingUserFromRequest } from "@/errors/errors.ts";
 
 export const createUser = async (req: Request, res: Response) => {
-  logger.info("Creating User");
+  req.log.info("Creating User");
   const validatedUser = req.validated as CreateUser;
   const user = await userService.createUser(validatedUser);
   return res.status(201).json(user);
+};
+
+export const selectUser = async (req: Request, res: Response) => {
+  req.log.info("Selecting User");
+  const user = req.user;
+  if (!user) throw new MissingUserFromRequest();
+  const selectedUser = await userService.selectUser(user.id);
+  return res.status(201).json(selectedUser);
 };

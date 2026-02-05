@@ -1,16 +1,39 @@
+import { eq } from "drizzle-orm";
 import { db, type DB } from "../db/db.ts";
 import { users } from "../db/schema.ts";
-import { CreateUserModel, type CreateUser } from "../models/user.model.ts";
+import {
+  CreateUserModel,
+  SelectUserModel,
+  type CreateUser,
+  type SelectUser,
+} from "../models/user.model.ts";
 
 class UserService {
   constructor(private readonly _db: DB) {}
+
   async createUser(data: CreateUser): Promise<CreateUser> {
     const [newUser] = await this._db.insert(users).values(data).returning({
+      id: users.id,
       firstName: users.firstName,
       lastName: users.lastName,
       phone: users.phone,
+      email: users.email,
     });
     return CreateUserModel.parse(newUser);
+  }
+
+  async selectUser(userId: string): Promise<SelectUser | undefined> {
+    const [user] = await this._db
+      .select({
+        id: users.id,
+        firstName: users.firstName,
+        lastName: users.lastName,
+        phone: users.phone,
+        email: users.email,
+      })
+      .from(users)
+      .where(eq(users.id, userId));
+    return user ? SelectUserModel.parse(user) : undefined;
   }
 }
 

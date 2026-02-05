@@ -39,20 +39,20 @@ export const transactionTypeEnum = pgEnum("transaction_type", [
 ]);
 
 export const users = pgTable("users", {
-  id: integer().primaryKey().generatedAlwaysAsIdentity(),
-  firstName: varchar("first_name", { length: 50 }),
-  lastName: varchar("last_name", { length: 50 }),
-  phone: varchar("phone", { length: 14 }).unique(),
+  id: uuid().primaryKey(), // UUID from Supabase Auth - no default, you provide it
+  firstName: varchar("first_name"),
+  lastName: varchar("last_name"),
+  phone: varchar("phone").unique(), // optional - user signs in with phone OR email
+  email: text().unique(), // optional - user signs in with phone OR email
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
 export const commitments = pgTable(
   "commitment",
   {
     id: integer().primaryKey().generatedAlwaysAsIdentity(),
-    userId: integer("user_id")
-      .notNull()
-      .references(() => users.id, { onDelete: "cascade" }),
+    userId: uuid("user_id").references(() => users.id, { onDelete: "cascade" }),
     type: commitmentTypeEnum().notNull(),
     frequency: frequencyEnum().notNull(),
     duration: durationEnum().notNull(),
@@ -66,7 +66,7 @@ export const commitments = pgTable(
 
 export const commitmentSessions = pgTable("commitment_session", {
   id: integer().primaryKey().generatedAlwaysAsIdentity(),
-  userId: integer("user_id").references(() => users.id, { onDelete: "cascade" }),
+  userId: uuid("user_id").references(() => users.id, { onDelete: "cascade" }),
   commitmentId: integer("commitment_id").references(() => commitments.id, { onDelete: "cascade" }),
   startDate: timestamp("start_date", { withTimezone: true }).notNull().defaultNow(),
   endDate: timestamp("end_date", { withTimezone: true }),
@@ -137,7 +137,7 @@ export const transactions = pgTable(
   "transactions",
   {
     id: uuid().defaultRandom().primaryKey(),
-    userId: integer("user_id").references(() => users.id, { onDelete: "cascade" }),
+    userId: uuid("user_id").references(() => users.id, { onDelete: "cascade" }),
     commitmentId: integer("commitment_id")
       .notNull()
       .references(() => commitments.id, { onDelete: "cascade" }),
