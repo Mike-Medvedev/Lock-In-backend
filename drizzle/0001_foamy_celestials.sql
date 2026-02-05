@@ -1,0 +1,1 @@
+ALTER TABLE "commitments" DROP COLUMN "is_refundable";

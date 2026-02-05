@@ -37,6 +37,7 @@
     "express": "^5.2.1",
     "express-rate-limit": "^8.2.1",
     "helmet": "^8.1.0",
+    "meebo": "^0.4.2",
     "postgres": "^3.4.8",
     "winston": "^3.19.0",
     "winston-transport": "^4.9.0",

@@ -13,6 +13,8 @@ import helmet from "helmet";
 import compression from "compression";
 import gracefulShutdown from "@/shutdown.ts";
 import { limiter } from "@/middleware/rate-limit.middleware.ts";
+import { swagger } from "meebo";
+import { responseHelpers } from "@/middleware/response.middleware";
 
 const allowedOrigins = config.origins;
 
@@ -47,10 +49,12 @@ app.use(compression({ threshold: "1kb" })); // Only compress responses > 1kb
 app.use(cors(corsOptions));
 app.use(json({ limit: "100kb" }));
 app.use(limiter);
+app.use(responseHelpers);
 
 app.use("/users", UserRouter);
 app.use("/transactions", TransactionRouter);
 app.use("/commitments", CommitmentRouter);
+app.use(swagger("Lock In"));
 
 app.get("/test-compression", (_, res) => {
   const largeData = { items: Array(100).fill({ name: "test", value: 12345 }) };

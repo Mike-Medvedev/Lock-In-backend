@@ -15,8 +15,6 @@ import {
 } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
 
-// ==================== ENUMS ====================
-
 export const commitmentType = pgEnum("commitment_type", ["walk", "run", "sleep", "screentime"]);
 
 export const commitmentDuration = pgEnum("commitment_duration", [
@@ -61,8 +59,6 @@ export const sessionStatus = pgEnum("session_status", [
 
 export const transactionType = pgEnum("transaction_type", ["stake", "payout", "forfeit", "rake"]);
 
-// ==================== TABLES ====================
-
 export const users = pgTable("users", {
   id: uuid().primaryKey(), // UUID from Supabase Auth - no default, you provide it
   firstName: varchar("first_name"),
@@ -89,7 +85,6 @@ export const commitments = pgTable(
     lockedBonusAmount: bigint("locked_bonus_amount", { mode: "number" }).notNull().default(0),
     status: commitmentStatus().notNull().default("pending_grace_period"),
     gracePeriodEndsAt: timestamp("grace_period_ends_at", { withTimezone: true }).notNull(), // createdAt + 1 day
-    isRefundable: boolean("is_refundable").notNull().default(true), // Derived: current time < gracePeriodEndsAt
   },
   (table) => [check("stake_amount_check", sql`${table.stakeAmount} between 50 and 10000`)],
 );

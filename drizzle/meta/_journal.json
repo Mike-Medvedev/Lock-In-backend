@@ -8,6 +8,13 @@
       "when": 1770301025125,
       "tag": "0000_mute_blur",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1770306298349,
+      "tag": "0001_foamy_celestials",
+      "breakpoints": true
     }
   ]
 }
