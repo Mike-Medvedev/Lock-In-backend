@@ -10,6 +10,7 @@
     "types": "tsc --noEmit",
     "format": "prettier --write . --ignore-path .prettierignore",
     "db:generate": "npx drizzle-kit generate",
+    "db:custom": "npx drizzle-kit generate",
     "db:migrate": "npx drizzle-kit migrate",
     "token": "tsx --env-file .env src/infra/auth/auth.ts",
     "prepare": "husky"
