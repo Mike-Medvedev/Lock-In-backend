@@ -4,11 +4,17 @@ import { commitments } from "@/infra/db/schema.ts";
 
 import {
   CommitmentModel,
+  CommitmentStatusEnum,
+  type CancelPreview,
+  type CancelResult,
   type Commitment,
   type CreateCommitment,
   type UpdateCommitment,
 } from "./commitment.model.ts";
 import {
+  CommitmentAlreadyCancelledError,
+  CommitmentAlreadyCompletedError,
+  CommitmentAlreadyForfeitedError,
   DatabaseResourceNotFoundError,
   MultipleActiveCommitmentsError,
   UnauthorizedDatabaseRequestError,
@@ -21,7 +27,6 @@ class CommitmentService {
     const results = await this._db.select().from(commitments).where(eq(commitments.userId, userId));
     return results.map((c) => CommitmentModel.parse(c));
   }
-
   async getActiveCommitments(userId: string): Promise<Commitment[]> {
     const results = await this._db
       .select()
@@ -79,11 +84,74 @@ class CommitmentService {
     return CommitmentModel.parse(updated);
   }
 
+  async getCancelPreview(commitmentId: string, userId: string): Promise<CancelPreview> {
+    const commitment = await this.getCommitment(commitmentId, userId);
+    this.validateCancellable(commitment);
+    const refundable = this.isRefundable(commitment);
+
+    return {
+      id: commitment.id,
+      refundable,
+      forfeitAmount: refundable ? 0 : commitment.stakeAmount,
+      stakeAmount: commitment.stakeAmount,
+      gracePeriodEndsAt: commitment.gracePeriodEndsAt,
+    };
+  }
+
+  async cancelCommitment(commitmentId: string, userId: string): Promise<CancelResult> {
+    const commitment = await this.getCommitment(commitmentId, userId);
+    this.validateCancellable(commitment);
+    const refundable = this.isRefundable(commitment);
+
+    if (refundable) {
+      await this._db
+        .update(commitments)
+        .set({ status: CommitmentStatusEnum.enum.cancelled })
+        .where(eq(commitments.id, commitmentId));
+
+      // TODO: Process refund via Stripe
+      return {
+        id: commitment.id,
+        refunded: true,
+        forfeitedAmount: 0,
+        status: CommitmentStatusEnum.enum.cancelled,
+      };
+    } else {
+      await this._db
+        .update(commitments)
+        .set({ status: CommitmentStatusEnum.enum.forfeited })
+        .where(eq(commitments.id, commitmentId));
+
+      // TODO: Add forfeited amount to pool
+      return {
+        id: commitment.id,
+        refunded: false,
+        forfeitedAmount: commitment.stakeAmount,
+        status: CommitmentStatusEnum.enum.forfeited,
+      };
+    }
+  }
+
   async deleteCommitment(id: string, userId: string): Promise<void> {
     // First verify the commitment exists and user owns it
     await this.getCommitment(id, userId);
 
     await this._db.delete(commitments).where(eq(commitments.id, id));
+  }
+
+  private isRefundable(commitment: Commitment): boolean {
+    return new Date() < commitment.gracePeriodEndsAt;
+  }
+
+  private validateCancellable(commitment: Commitment): void {
+    switch (commitment.status) {
+      case CommitmentStatusEnum.enum.cancelled:
+        throw new CommitmentAlreadyCancelledError();
+      case CommitmentStatusEnum.enum.forfeited:
+        throw new CommitmentAlreadyForfeitedError();
+      case CommitmentStatusEnum.enum.completed:
+        throw new CommitmentAlreadyCompletedError();
+    }
   }
 }
 

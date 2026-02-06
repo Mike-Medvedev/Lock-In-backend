@@ -1,6 +1,9 @@
 import { DrizzleQueryError } from "drizzle-orm/errors";
 import type { ErrorRequestHandler, Request, Response, NextFunction } from "express";
 import {
+  CommitmentAlreadyCancelledError,
+  CommitmentAlreadyCompletedError,
+  CommitmentAlreadyForfeitedError,
   DatabaseError,
   DatabaseResourceNotFoundError,
   MissingTokenError,
@@ -63,7 +66,19 @@ const errorHandler: ErrorRequestHandler = function (
   }
   if (error instanceof MultipleActiveCommitmentsError) {
     req.log.error(error);
-    return res.error(403, error);
+    return res.error(409, error);
+  }
+  if (error instanceof CommitmentAlreadyCancelledError) {
+    req.log.error(error);
+    return res.error(409, error);
+  }
+  if (error instanceof CommitmentAlreadyForfeitedError) {
+    req.log.error(error);
+    return res.error(409, error);
+  }
+  if (error instanceof CommitmentAlreadyCompletedError) {
+    req.log.error(error);
+    return res.error(409, error);
   }
 
   req.log.error(error);

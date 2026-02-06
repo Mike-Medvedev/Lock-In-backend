@@ -3,6 +3,8 @@ import { TypedRouter } from "meebo";
 import { CommitmentController } from "./commitment.controller";
 import { validateUser } from "@/middleware/auth.middleware";
 import {
+  CancelPreviewModel,
+  CancelResultModel,
   CommitmentModel,
   CommitmentsArray,
   CreateCommitmentModel,
@@ -75,6 +77,28 @@ CommitmentRouter.patch(
     summary: "Update a commitment",
   },
   CommitmentController.updateCommitment,
+);
+
+CommitmentRouter.get(
+  "/:id/cancel",
+  {
+    params: IdParamsSchema,
+    response: SuccessSchema(CancelPreviewModel),
+    summary: "Preview commitment cancellation",
+    description: "Returns what will happen if the commitment is cancelled (refund or forfeit)",
+  },
+  CommitmentController.getCancelPreview,
+);
+
+CommitmentRouter.post(
+  "/:id/cancel",
+  {
+    params: IdParamsSchema,
+    response: SuccessSchema(CancelResultModel),
+    summary: "Cancel a commitment",
+    description: "Cancels the commitment. Refunds if within grace period, forfeits stake if not.",
+  },
+  CommitmentController.cancelCommitment,
 );
 
 CommitmentRouter.delete(

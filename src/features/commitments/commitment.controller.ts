@@ -54,6 +54,26 @@ export const CommitmentController = {
     }
   },
 
+  async getCancelPreview(req: Request, res: Response, next: NextFunction) {
+    try {
+      const id = validateIdParams(req.params);
+      const preview = await commitmentService.getCancelPreview(id, req.user!.id);
+      res.success(preview);
+    } catch (error) {
+      next(error);
+    }
+  },
+
+  async cancelCommitment(req: Request, res: Response, next: NextFunction) {
+    try {
+      const id = validateIdParams(req.params);
+      const result = await commitmentService.cancelCommitment(id, req.user!.id);
+      res.success(result);
+    } catch (error) {
+      next(error);
+    }
+  },
+
   async deleteCommitment(req: Request, res: Response, next: NextFunction) {
     try {
       const id = validateIdParams(req.params);

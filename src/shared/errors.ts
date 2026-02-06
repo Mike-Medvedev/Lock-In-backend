@@ -63,3 +63,24 @@ export class MultipleActiveCommitmentsError extends Error {
     this.name = "MultipleActiveCommitmentsError";
   }
 }
+
+export class CommitmentAlreadyCancelledError extends Error {
+  constructor() {
+    super("Commitment has already been cancelled");
+    this.name = "CommitmentAlreadyCancelledError";
+  }
+}
+
+export class CommitmentAlreadyForfeitedError extends Error {
+  constructor() {
+    super("Commitment has already been forfeited");
+    this.name = "CommitmentAlreadyForfeitedError";
+  }
+}
+
+export class CommitmentAlreadyCompletedError extends Error {
+  constructor() {
+    super("Commitment has already been completed");
+    this.name = "CommitmentAlreadyCompletedError";
+  }
+}

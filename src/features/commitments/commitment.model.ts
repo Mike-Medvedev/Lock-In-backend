@@ -8,7 +8,7 @@ import {
   commitmentStatus,
 } from "@/infra/db/schema.ts";
 import { z } from "zod";
-import { DURATION_WEEKS, MS } from "@/shared/constants";
+import { DURATION_WEEKS } from "@/shared/constants";
 import { addTime } from "@/shared/date";
 
 export const CommitmentTypeEnum = createSelectSchema(commitmentType);
@@ -39,16 +39,19 @@ export const CreateCommitmentModel = createInsertSchema(commitments, {
     frequency: true,
     duration: true,
     sessionGoal: true,
-    startDate: true,
     stakeAmount: true,
     lockedBonusAmount: true,
   })
   .strict()
-  .transform((data) => ({
-    ...data,
-    endDate: addTime(data.startDate, DURATION_WEEKS[data.duration], "WEEK"),
-    gracePeriodEndsAt: new Date(data.startDate.getTime() + MS.DAY),
-  }));
+  .transform((data) => {
+    const startDate = new Date();
+    return {
+      ...data,
+      startDate,
+      endDate: addTime(startDate, DURATION_WEEKS[data.duration], "WEEK"),
+      gracePeriodEndsAt: addTime(startDate, 1, "DAY"),
+    };
+  });
 
 export const UpdateCommitmentModel = createUpdateSchema(commitments)
   .pick({
@@ -58,9 +61,27 @@ export const UpdateCommitmentModel = createUpdateSchema(commitments)
 
 export const CommitmentsArray = z.array(CommitmentModel);
 
+export const CancelPreviewModel = z.object({
+  id: z.uuid(),
+  refundable: z.boolean(),
+  forfeitAmount: z.number(),
+  stakeAmount: z.number(),
+  gracePeriodEndsAt: z.coerce.date(),
+});
+
+export const CancelResultModel = z.object({
+  id: z.uuid(),
+  refunded: z.boolean(),
+  forfeitedAmount: z.number(),
+  status: CommitmentStatusEnum,
+});
+
 export type Commitment = z.infer<typeof CommitmentModel>;
 export type CreateCommitment = z.infer<typeof CreateCommitmentModel>;
 export type UpdateCommitment = z.infer<typeof UpdateCommitmentModel>;
+
+export type CancelPreview = z.infer<typeof CancelPreviewModel>;
+export type CancelResult = z.infer<typeof CancelResultModel>;
 
 export type CommitmentType = z.infer<typeof CommitmentTypeEnum>;
 export type WorkoutFrequency = z.infer<typeof WorkoutFrequencyEnum>;
