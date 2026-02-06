@@ -8,6 +8,8 @@ import {
   commitmentStatus,
 } from "@/infra/db/schema.ts";
 import { z } from "zod";
+import { DURATION_WEEKS, MS } from "@/shared/constants";
+import { addTime } from "@/shared/date";
 
 export const CommitmentTypeEnum = createSelectSchema(commitmentType);
 export const WorkoutFrequencyEnum = createSelectSchema(workoutFrequency);
@@ -31,12 +33,22 @@ export const CommitmentModel = createSelectSchema(commitments).pick({
 
 export const CreateCommitmentModel = createInsertSchema(commitments, {
   startDate: z.coerce.date(),
-  endDate: z.coerce.date(),
-  createdAt: z.coerce.date(),
-  gracePeriodEndsAt: z.coerce.date(),
 })
-  .omit({ userId: true })
-  .strict();
+  .pick({
+    type: true,
+    frequency: true,
+    duration: true,
+    sessionGoal: true,
+    startDate: true,
+    stakeAmount: true,
+    lockedBonusAmount: true,
+  })
+  .strict()
+  .transform((data) => ({
+    ...data,
+    endDate: addTime(data.startDate, DURATION_WEEKS[data.duration], "WEEK"),
+    gracePeriodEndsAt: new Date(data.startDate.getTime() + MS.DAY),
+  }));
 
 export const UpdateCommitmentModel = createUpdateSchema(commitments)
   .pick({

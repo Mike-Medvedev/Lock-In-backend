@@ -15,3 +15,10 @@ export const MS = {
 export const COMMITMENT_DEFAULTS = {
   GRACE_PERIOD_DAYS: 1,
 } as const;
+
+export const DURATION_WEEKS = {
+  one_weeks: 1,
+  two_weeks: 2,
+  three_weeks: 3,
+  four_weeks: 4,
+} as const;

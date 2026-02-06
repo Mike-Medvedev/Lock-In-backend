@@ -1,0 +1,1 @@
+ALTER TABLE "users" ADD COLUMN "isPremium" boolean DEFAULT false;

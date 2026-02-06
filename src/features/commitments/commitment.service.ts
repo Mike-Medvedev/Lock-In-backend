@@ -12,15 +12,9 @@ import {
   DatabaseResourceNotFoundError,
   UnauthorizedDatabaseRequestError,
 } from "@/shared/errors.ts";
-import { fromNow } from "@/shared/date.ts";
-import { COMMITMENT_DEFAULTS } from "@/shared/constants.ts";
 
 class CommitmentService {
   constructor(private readonly _db: DB) {}
-
-  private getDefaultGracePeriodEnd(): Date {
-    return fromNow(COMMITMENT_DEFAULTS.GRACE_PERIOD_DAYS, "DAY");
-  }
 
   async getCommitments(userId: string): Promise<Commitment[]> {
     const results = await this._db.select().from(commitments).where(eq(commitments.userId, userId));
@@ -50,14 +44,11 @@ class CommitmentService {
   }
 
   async createCommitment(userId: string, input: CreateCommitment): Promise<Commitment> {
-    const gracePeriodEndsAt = this.getDefaultGracePeriodEnd();
-
     const [commitment] = await this._db
       .insert(commitments)
       .values({
         ...input,
         userId,
-        gracePeriodEndsAt,
       })
       .returning();
 
