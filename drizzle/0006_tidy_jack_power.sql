@@ -1,0 +1,1 @@
+ALTER TABLE "commitments" DROP COLUMN "in_grace_period";

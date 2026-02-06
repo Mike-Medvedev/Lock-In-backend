@@ -43,6 +43,13 @@
       "when": 1770396509637,
       "tag": "0005_hard_jazinda",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1770396939094,
+      "tag": "0006_tidy_jack_power",
+      "breakpoints": true
     }
   ]
 }

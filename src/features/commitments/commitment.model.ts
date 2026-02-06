@@ -29,7 +29,6 @@ export const CommitmentModel = createSelectSchema(commitments).pick({
   lockedBonusAmount: true,
   status: true,
   gracePeriodEndsAt: true,
-  inGracePeriod: true,
 });
 
 export const CreateCommitmentModel = createInsertSchema(commitments, {

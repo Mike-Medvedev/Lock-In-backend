@@ -83,7 +83,6 @@ export const commitments = pgTable(
     stakeAmount: bigint("stake_amount", { mode: "number" }).notNull(), // 50-10000 cents
     lockedBonusAmount: bigint("locked_bonus_amount", { mode: "number" }).notNull().default(0),
     status: commitmentStatus().notNull().default("active"),
-    inGracePeriod: boolean("in_grace_period").notNull().default(true),
     gracePeriodEndsAt: timestamp("grace_period_ends_at", { withTimezone: true }).notNull(), // createdAt + 1 day
   },
   (table) => [check("stake_amount_check", sql`${table.stakeAmount} between 50 and 10000`)],
