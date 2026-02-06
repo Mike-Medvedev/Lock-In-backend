@@ -15,7 +15,19 @@ export const CommitmentDurationEnum = createSelectSchema(commitmentDuration);
 export const SessionGoalEnum = createSelectSchema(sessionGoalType);
 export const CommitmentStatusEnum = createSelectSchema(commitmentStatus);
 
-export const CommitmentModel = createSelectSchema(commitments);
+export const CommitmentModel = createSelectSchema(commitments).pick({
+  id: true,
+  type: true,
+  frequency: true,
+  duration: true,
+  sessionGoal: true,
+  startDate: true,
+  endDate: true,
+  stakeAmount: true,
+  lockedBonusAmount: true,
+  status: true,
+  gracePeriodEndsAt: true,
+});
 
 export const CreateCommitmentModel = createInsertSchema(commitments, {
   startDate: z.coerce.date(),

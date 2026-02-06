@@ -58,7 +58,7 @@ export const CommitmentController = {
     try {
       const id = validateIdParams(req.params);
       await commitmentService.deleteCommitment(id, req.user!.id);
-      res.success(true, 200);
+      res.sendStatus(204);
     } catch (error) {
       next(error);
     }
