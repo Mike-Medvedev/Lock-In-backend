@@ -56,3 +56,10 @@ export class UnauthorizedDatabaseRequestError extends Error {
     this.name = "UnauthorizedDatabaseRequestError";
   }
 }
+
+export class MultipleActiveCommitmentsError extends Error {
+  constructor() {
+    super("User already has an active commitment ");
+    this.name = "MultipleActiveCommitmentsError";
+  }
+}

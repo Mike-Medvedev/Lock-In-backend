@@ -10,6 +10,7 @@ import {
 } from "./commitment.model.ts";
 import {
   DatabaseResourceNotFoundError,
+  MultipleActiveCommitmentsError,
   UnauthorizedDatabaseRequestError,
 } from "@/shared/errors.ts";
 
@@ -44,6 +45,12 @@ class CommitmentService {
   }
 
   async createCommitment(userId: string, input: CreateCommitment): Promise<Commitment> {
+    // check if user has an active commitment already
+
+    if ((await this.getActiveCommitments(userId)).length > 1) {
+      throw new MultipleActiveCommitmentsError();
+    }
+
     const [commitment] = await this._db
       .insert(commitments)
       .values({

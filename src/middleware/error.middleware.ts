@@ -4,6 +4,7 @@ import {
   DatabaseError,
   DatabaseResourceNotFoundError,
   MissingTokenError,
+  MultipleActiveCommitmentsError,
   PG_ERROR_CODES,
   UnauthorizedDatabaseRequestError,
   ZodError,
@@ -57,6 +58,10 @@ const errorHandler: ErrorRequestHandler = function (
     return res.error(404, error);
   }
   if (error instanceof UnauthorizedDatabaseRequestError) {
+    req.log.error(error);
+    return res.error(403, error);
+  }
+  if (error instanceof MultipleActiveCommitmentsError) {
     req.log.error(error);
     return res.error(403, error);
   }

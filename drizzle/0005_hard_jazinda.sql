@@ -1,0 +1,1 @@
+ALTER TABLE "commitments" RENAME COLUMN "inGracePeriod" TO "in_grace_period";
