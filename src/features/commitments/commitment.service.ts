@@ -50,8 +50,7 @@ class CommitmentService {
   }
 
   async createCommitment(userId: string, input: CreateCommitment): Promise<Commitment> {
-    // check if user has an active commitment already
-
+    // user cannot have more than 1 active commitment
     if ((await this.getActiveCommitments(userId)).length > 1) {
       throw new MultipleActiveCommitmentsError();
     }

@@ -11,6 +11,7 @@ import {
   uuid,
   text,
   date,
+  integer,
 } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
 
@@ -182,4 +183,14 @@ export const pool = pgTable("pool", {
   totalRakeCollected: doublePrecision("total_rake_collected").notNull().default(0), // 20% of all forfeitures
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const frequencyLookup = pgTable("frequency_lookup", {
+  frequency: workoutFrequency().notNull().primaryKey(),
+  value: integer().notNull(),
+});
+
+export const durationLookup = pgTable("duration_lookup", {
+  duration: commitmentDuration().notNull().primaryKey(),
+  value: integer().notNull(),
 });
