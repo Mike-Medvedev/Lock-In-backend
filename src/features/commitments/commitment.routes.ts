@@ -16,7 +16,7 @@ import z from "zod";
 
 const CommitmentRouter = TypedRouter(express.Router(), {
   tag: "Commitments",
-  basePath: "/commitments",
+  basePath: "/api/v1/commitments",
 });
 
 CommitmentRouter.use(validateUser);

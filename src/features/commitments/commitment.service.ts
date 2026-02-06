@@ -72,7 +72,6 @@ class CommitmentService {
     userId: string,
     input: UpdateCommitment,
   ): Promise<Commitment> {
-    // First verify the commitment exists and user owns it
     await this.getCommitment(commitmentId, userId);
 
     const [updated] = await this._db
@@ -133,7 +132,6 @@ class CommitmentService {
   }
 
   async deleteCommitment(id: string, userId: string): Promise<void> {
-    // First verify the commitment exists and user owns it
     await this.getCommitment(id, userId);
 
     await this._db.delete(commitments).where(eq(commitments.id, id));

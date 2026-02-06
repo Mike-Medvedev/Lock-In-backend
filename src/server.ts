@@ -16,6 +16,7 @@ import gracefulShutdown from "@/shutdown.ts";
 import { limiter } from "@/middleware/rate-limit.middleware.ts";
 import { swagger } from "meebo";
 import { responseHelpers } from "@/middleware/response.middleware";
+import packageJson from "@root/package.json" with { type: "json" };
 
 const allowedOrigins = config.origins;
 
@@ -42,6 +43,7 @@ const corsOptions = {
 };
 
 const app = express();
+const v1Router = express.Router();
 
 app.use(requestLogger);
 app.use(helmet());
@@ -51,10 +53,11 @@ app.use(json({ limit: "100kb" }));
 app.use(limiter);
 app.use(responseHelpers);
 
-app.use("/users", UserRouter);
-app.use("/transactions", TransactionRouter);
-app.use("/commitments", CommitmentRouter);
-app.use(swagger("Lock In", { bearerAuth: true }));
+v1Router.use("/users", UserRouter);
+v1Router.use("/transactions", TransactionRouter);
+v1Router.use("/commitments", CommitmentRouter);
+app.use("/api/v1", v1Router);
+app.use(swagger("Lock In", { bearerAuth: true, version: packageJson.version }));
 
 app.get("/test-compression", (_, res) => {
   const largeData = { items: Array(100).fill({ name: "test", value: 12345 }) };
