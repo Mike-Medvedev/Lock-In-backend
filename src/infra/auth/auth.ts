@@ -1,7 +1,6 @@
 import { AuthInvalidTokenResponseError, createClient, type User } from "@supabase/supabase-js";
 import { config } from "@/infra/config/config";
 
-// Create a single supabase client for interacting with your database
 const supabase = createClient(config.SUPABASE_PROJECT_URL, config.SUPABASE_PUBLISHABLE_KEY);
 
 export async function verifyUser(jwt: string): Promise<User> {
@@ -12,9 +11,3 @@ export async function verifyUser(jwt: string): Promise<User> {
   if (error || !user) throw error ?? new AuthInvalidTokenResponseError();
   return user;
 }
-
-const data = await supabase.auth.signInWithPassword({
-  email: "mmedvedev20@gmail.com",
-  password: "12345b67",
-});
-console.log(data.data, data.error);

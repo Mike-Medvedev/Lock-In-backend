@@ -43,10 +43,9 @@ const corsOptions = {
 
 const app = express();
 
-// Apply middleware
 app.use(requestLogger);
 app.use(helmet());
-app.use(compression({ threshold: "1kb" })); // Only compress responses > 1kb
+app.use(compression({ threshold: "1kb" }));
 app.use(cors(corsOptions));
 app.use(json({ limit: "100kb" }));
 app.use(limiter);
@@ -55,7 +54,7 @@ app.use(responseHelpers);
 app.use("/users", UserRouter);
 app.use("/transactions", TransactionRouter);
 app.use("/commitments", CommitmentRouter);
-app.use(swagger("Lock In"));
+app.use(swagger("Lock In", { bearerAuth: true }));
 
 app.get("/test-compression", (_, res) => {
   const largeData = { items: Array(100).fill({ name: "test", value: 12345 }) };
