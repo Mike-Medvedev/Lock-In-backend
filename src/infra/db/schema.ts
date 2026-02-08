@@ -8,6 +8,7 @@ import {
   timestamp,
   doublePrecision,
   index,
+  unique,
   uuid,
   text,
   date,
@@ -73,7 +74,9 @@ export const commitments = pgTable(
   "commitments",
   {
     id: uuid().primaryKey().defaultRandom(),
-    userId: uuid("user_id").references(() => users.id, { onDelete: "cascade" }),
+    userId: uuid("user_id")
+      .references(() => users.id, { onDelete: "cascade" })
+      .notNull(),
     type: commitmentType().notNull(),
     frequency: workoutFrequency().notNull(),
     duration: commitmentDuration().notNull(),
@@ -86,7 +89,10 @@ export const commitments = pgTable(
     status: commitmentStatus().notNull().default("active"),
     gracePeriodEndsAt: timestamp("grace_period_ends_at", { withTimezone: true }).notNull(), // createdAt + 1 day
   },
-  (table) => [check("stake_amount_check", sql`${table.stakeAmount} between 50 and 10000`)],
+  (table) => [
+    check("stake_amount_check", sql`${table.stakeAmount} between 50 and 10000`),
+    unique("one_commitment_per_user").on(table.userId),
+  ],
 );
 
 export const commitmentSessions = pgTable("commitment_sessions", {

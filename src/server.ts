@@ -65,7 +65,6 @@ app.get("/test-compression", (_, res) => {
 });
 
 app.get("/", (_, res) => {
-  logger.info("Logging");
   res.send("Hello World");
 });
 app.get("/health", (_, res) => {
