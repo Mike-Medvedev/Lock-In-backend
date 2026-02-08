@@ -114,7 +114,8 @@ export const commitmentSessions = pgTable(
     endDate: timestamp("end_date", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     completedAt: timestamp("completed_at", { withTimezone: true }),
-    countingDay: date("counting_day").notNull(), // Calendar day only; PostgreSQL date has no timezone (unlike timestamp)
+    timezone: text("timezone").notNull().default("UTC"), // IANA timezone the session was started in (e.g. America/Los_Angeles)
+    countingDay: date("counting_day").notNull(), // Derived from startDate in timezone; calendar day only
     sessionDuration: doublePrecision("session_duration").notNull().default(0),
     sessionStatus: sessionStatus("session_status").notNull().default("not_started"),
     verificationStatus: verificationStatus("verification_status").notNull().default("not_started"),

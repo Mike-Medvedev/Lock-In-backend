@@ -43,3 +43,11 @@ export function isFuture(date: Date): boolean {
 export function diffIn(unit: TimeUnit, date1: Date, date2: Date): number {
   return Math.abs(date1.getTime() - date2.getTime()) / MS[unit];
 }
+
+/**
+ * Returns the calendar date (YYYY-MM-DD) for a given instant in an IANA timezone.
+ * Used to derive countingDay from startDate + timezone.
+ */
+export function getDateInTimezone(date: Date, ianaTimezone: string): string {
+  return date.toLocaleDateString("en-CA", { timeZone: ianaTimezone });
+}

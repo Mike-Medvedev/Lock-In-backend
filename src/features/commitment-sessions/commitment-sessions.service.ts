@@ -17,6 +17,7 @@ import {
   SessionAlreadyExistsForDayError,
   UnauthorizedDatabaseRequestError,
 } from "@/shared/errors.ts";
+import { getDateInTimezone } from "@/shared/date";
 
 class CommitmentSessionService {
   constructor(private readonly _db: DB) {}
@@ -64,17 +65,20 @@ class CommitmentSessionService {
       throw new CommitmentNotActiveError();
     }
 
-    //TODO: fix the input.countingDay to be timezone sensitive
+    const startDate = new Date();
+    const countingDay = getDateInTimezone(startDate, input.timezone);
+
     try {
       const [session] = await this._db
         .insert(commitmentSessions)
         .values({
           userId,
           commitmentId: input.commitmentId,
-          countingDay: input.countingDay.toISOString(),
+          timezone: input.timezone,
+          countingDay,
+          startDate,
           sessionGoal: commitment.sessionGoal,
-          sessionStatus: SessionStatusEnum.enum.completed,
-          startDate: new Date(),
+          sessionStatus: SessionStatusEnum.enum.in_progress,
         })
         .returning();
 

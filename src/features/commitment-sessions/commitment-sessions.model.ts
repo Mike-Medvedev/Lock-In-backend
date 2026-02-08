@@ -19,9 +19,11 @@ export const CommitmentSessionModel = createSelectSchema(commitmentSessions).pic
   endDate: true,
   createdAt: true,
   completedAt: true,
+  timezone: true,
   countingDay: true,
   sessionDuration: true,
   sessionStatus: true,
+  verificationStatus: true,
   sessionGoal: true,
   actualValue: true,
   flaggedForReview: true,
@@ -31,8 +33,8 @@ export const CommitmentSessionModel = createSelectSchema(commitmentSessions).pic
 
 export const CreateCommitmentSessionModel = z
   .object({
-    commitmentId: z.uuid(),
-    countingDay: z.coerce.date(),
+    commitmentId: z.string().uuid(),
+    timezone: z.string().min(1), // IANA timezone e.g. America/Los_Angeles
   })
   .strict();
 
