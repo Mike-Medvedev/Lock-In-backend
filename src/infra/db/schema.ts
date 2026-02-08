@@ -52,9 +52,14 @@ export const sessionStatus = pgEnum("session_status", [
   "in_progress",
   "paused",
   "completed",
-  "verification_pending",
-  "verification_failed",
-  "verification_succeeded",
+  "cancelled",
+]);
+
+export const verificationStatus = pgEnum("verification_status", [
+  "not_started",
+  "pending",
+  "failed",
+  "succeeded",
 ]);
 
 export const transactionType = pgEnum("transaction_type", ["stake", "payout", "forfeit", "rake"]);
@@ -95,23 +100,34 @@ export const commitments = pgTable(
   ],
 );
 
-export const commitmentSessions = pgTable("commitment_sessions", {
-  id: uuid().primaryKey().defaultRandom(),
-  userId: uuid("user_id").references(() => users.id, { onDelete: "cascade" }),
-  commitmentId: uuid("commitment_id").references(() => commitments.id, { onDelete: "cascade" }),
-  startDate: timestamp("start_date", { withTimezone: true }).notNull().defaultNow(),
-  endDate: timestamp("end_date", { withTimezone: true }),
-  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-  completedAt: timestamp("completed_at", { withTimezone: true }),
-  countingDay: date("counting_day").notNull(), // The day (in user's timezone) this session counts toward
-  sessionDuration: doublePrecision("session_duration").notNull().default(0),
-  sessionStatus: sessionStatus("session_status").notNull().default("not_started"),
-  sessionGoal: sessionGoalType("session_goal").notNull(),
-  actualValue: doublePrecision("actual_value"), // Actual steps, miles, etc. achieved
-  flaggedForReview: boolean("flagged_for_review").notNull().default(false),
-  fraudDetected: boolean("fraud_detected").notNull().default(false),
-  reviewNotes: text("review_notes"),
-});
+export const commitmentSessions = pgTable(
+  "commitment_sessions",
+  {
+    id: uuid().primaryKey().defaultRandom(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    commitmentId: uuid("commitment_id")
+      .notNull()
+      .references(() => commitments.id, { onDelete: "cascade" }),
+    startDate: timestamp("start_date", { withTimezone: true }).notNull().defaultNow(),
+    endDate: timestamp("end_date", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    completedAt: timestamp("completed_at", { withTimezone: true }),
+    countingDay: date("counting_day").notNull(), // Calendar day only; PostgreSQL date has no timezone (unlike timestamp)
+    sessionDuration: doublePrecision("session_duration").notNull().default(0),
+    sessionStatus: sessionStatus("session_status").notNull().default("not_started"),
+    verificationStatus: verificationStatus("verification_status").notNull().default("not_started"),
+    sessionGoal: sessionGoalType("session_goal").notNull(),
+    actualValue: doublePrecision("actual_value"), // Actual steps, miles, etc. achieved
+    flaggedForReview: boolean("flagged_for_review").notNull().default(false),
+    fraudDetected: boolean("fraud_detected").notNull().default(false),
+    reviewNotes: text("review_notes"),
+  },
+  (table) => [
+    unique("one_session_per_commitment_per_day").on(table.commitmentId, table.countingDay),
+  ],
+);
 
 export const motionSamples = pgTable(
   "motion_samples",

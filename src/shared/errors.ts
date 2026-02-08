@@ -84,3 +84,17 @@ export class CommitmentAlreadyCompletedError extends Error {
     this.name = "CommitmentAlreadyCompletedError";
   }
 }
+
+export class SessionAlreadyExistsForDayError extends Error {
+  constructor() {
+    super("A session already exists for this commitment on this day");
+    this.name = "SessionAlreadyExistsForDayError";
+  }
+}
+
+export class CommitmentNotActiveError extends Error {
+  constructor() {
+    super("Commitment is not active");
+    this.name = "CommitmentNotActiveError";
+  }
+}

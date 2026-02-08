@@ -1,1 +1,70 @@
-export {};
+import type { Request, Response, NextFunction } from "express";
+import { commitmentSessionService } from "./commitment-sessions.service";
+import type {
+  CreateCommitmentSession,
+  UpdateCommitmentSessionStatus,
+} from "./commitment-sessions.model";
+import { validateIdParams } from "@/shared/validators";
+
+export const CommitmentSessionsController = {
+  async getSessions(req: Request, res: Response, next: NextFunction) {
+    try {
+      const sessions = await commitmentSessionService.getSessions(req.user!.id);
+      res.success(sessions);
+    } catch (error) {
+      next(error);
+    }
+  },
+
+  async getSession(req: Request, res: Response, next: NextFunction) {
+    try {
+      const id = validateIdParams(req.params);
+      const session = await commitmentSessionService.getSession(id, req.user!.id);
+      res.success(session);
+    } catch (error) {
+      next(error);
+    }
+  },
+
+  async createSession(req: Request, res: Response, next: NextFunction) {
+    try {
+      const userId = req.user!.id;
+      const body = req.body as CreateCommitmentSession;
+      const session = await commitmentSessionService.createSession(userId, body);
+      res.success(session, 201);
+    } catch (error) {
+      next(error);
+    }
+  },
+
+  async updateSessionStatus(req: Request, res: Response, next: NextFunction) {
+    try {
+      const id = validateIdParams(req.params);
+      const body = req.body as UpdateCommitmentSessionStatus;
+      const session = await commitmentSessionService.updateSessionStatus(id, req.user!.id, body);
+      res.success(session);
+    } catch (error) {
+      next(error);
+    }
+  },
+
+  async completeSession(req: Request, res: Response, next: NextFunction) {
+    try {
+      const id = validateIdParams(req.params);
+      const session = await commitmentSessionService.completeSession(id, req.user!.id);
+      res.success(session);
+    } catch (error) {
+      next(error);
+    }
+  },
+
+  async cancelSession(req: Request, res: Response, next: NextFunction) {
+    try {
+      const id = validateIdParams(req.params);
+      const session = await commitmentSessionService.cancelSession(id, req.user!.id);
+      res.success(session);
+    } catch (error) {
+      next(error);
+    }
+  },
+};

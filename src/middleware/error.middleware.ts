@@ -4,11 +4,13 @@ import {
   CommitmentAlreadyCancelledError,
   CommitmentAlreadyCompletedError,
   CommitmentAlreadyForfeitedError,
+  CommitmentNotActiveError,
   DatabaseError,
   DatabaseResourceNotFoundError,
   MissingTokenError,
   MultipleActiveCommitmentsError,
   PG_ERROR_CODES,
+  SessionAlreadyExistsForDayError,
   UnauthorizedDatabaseRequestError,
   ZodError,
 } from "@/shared/errors.ts";
@@ -29,7 +31,8 @@ const errorHandler: ErrorRequestHandler = function (
 
   if (error instanceof DrizzleQueryError || error instanceof DatabaseError) {
     const databaseError = error instanceof DatabaseError ? error : new DatabaseError(error);
-    req.log.error(databaseError);
+    const original = databaseError.cause ?? error;
+    req.log.error(original);
 
     switch (databaseError?.code) {
       case PG_ERROR_CODES.UNIQUE_VIOLATION:
@@ -79,6 +82,14 @@ const errorHandler: ErrorRequestHandler = function (
   if (error instanceof CommitmentAlreadyCompletedError) {
     req.log.error(error);
     return res.error(409, error);
+  }
+  if (error instanceof SessionAlreadyExistsForDayError) {
+    req.log.error(error);
+    return res.error(409, error);
+  }
+  if (error instanceof CommitmentNotActiveError) {
+    req.log.error(error);
+    return res.error(400, error);
   }
 
   req.log.error(error);

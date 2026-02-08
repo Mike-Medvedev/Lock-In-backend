@@ -8,6 +8,7 @@ import { requestLogger } from "@/middleware/logger.middleware.ts";
 import UserRouter from "@/features/users/user.routes.ts";
 import TransactionRouter from "@/features/transactions/transaction.routes.ts";
 import CommitmentRouter from "@/features/commitments/commitment.routes.ts";
+import CommitmentSessionsRouter from "@/features/commitment-sessions/commitment-sessions.routes.ts";
 import errorHandler from "@/middleware/error.middleware.ts";
 import logger from "@/infra/logger/logger";
 import helmet from "helmet";
@@ -56,6 +57,7 @@ app.use(responseHelpers);
 v1Router.use("/users", UserRouter);
 v1Router.use("/transactions", TransactionRouter);
 v1Router.use("/commitments", CommitmentRouter);
+v1Router.use("/commitment-sessions", CommitmentSessionsRouter);
 app.use("/api/v1", v1Router);
 app.use(swagger("Lock In", { bearerAuth: true, version: packageJson.version }));
 
