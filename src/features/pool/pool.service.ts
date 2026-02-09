@@ -75,6 +75,29 @@ class PoolService {
       });
     }
   }
+
+  /**
+   * Subtract a payout from stakesHeld when a user completes their commitment
+   * and we return their stake (or stake + bonus).
+   *
+   * TODO: When bonuses are implemented, also subtract bonus from `balance`.
+   */
+  async subtractPayout(stakeAmountCents: number, _bonusAmountCents: number = 0): Promise<void> {
+    const stakeDollars = stakeAmountCents / 100;
+    // const bonusDollars = bonusAmountCents / 100; // TODO: use when bonuses are live
+    const [existing] = await this._db.select({ id: pool.id }).from(pool).limit(1);
+    if (!existing) return;
+
+    await this._db
+      .update(pool)
+      .set({
+        stakesHeld: sql`GREATEST(0, ${pool.stakesHeld} - ${stakeDollars})`,
+        // TODO: When bonuses are live, also subtract from balance:
+        // balance: sql`GREATEST(0, ${pool.balance} - ${bonusDollars})`,
+        updatedAt: new Date(),
+      })
+      .where(eq(pool.id, existing.id));
+  }
 }
 
 export const poolService = new PoolService(db);

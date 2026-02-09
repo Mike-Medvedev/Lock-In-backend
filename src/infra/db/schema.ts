@@ -193,6 +193,19 @@ export const gpsSamples = pgTable(
   (t) => [index("gps_session_time_idx").on(t.commitmentSessionId, t.capturedAt)],
 );
 
+export const pedometerSamples = pgTable(
+  "pedometer_samples",
+  {
+    id: uuid().primaryKey().defaultRandom(),
+    commitmentSessionId: uuid("commitment_session_id")
+      .notNull()
+      .references(() => commitmentSessions.id, { onDelete: "cascade" }),
+    capturedAt: timestamp("captured_at", { withTimezone: true }).notNull(),
+    steps: integer("steps").notNull(), // cumulative step count from OS pedometer since session start
+  },
+  (t) => [index("pedometer_session_time_idx").on(t.commitmentSessionId, t.capturedAt)],
+);
+
 export const transactions = pgTable(
   "transactions",
   {

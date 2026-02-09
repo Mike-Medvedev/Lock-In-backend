@@ -16,6 +16,7 @@ import {
   CommitmentAlreadyCompletedError,
   CommitmentAlreadyForfeitedError,
   CommitmentAlreadyStakedError,
+  CommitmentNotActiveError,
   CommitmentPaymentPendingError,
   CommitmentRefundPendingError,
   DatabaseResourceNotFoundError,
@@ -26,6 +27,8 @@ import { paymentService } from "@/features/payments/payments.service";
 import { poolService } from "@/features/pool/pool.service";
 import { TransactionStatusEnum } from "@/features/transactions/transaction.model";
 import { transactionService } from "@/features/transactions/transaction.service";
+import { payoutService } from "@/features/payouts/payout.service";
+import logger from "@/infra/logger/logger";
 
 class CommitmentService {
   constructor(private readonly _db: DB) {}
@@ -225,6 +228,50 @@ class CommitmentService {
     await this.getCommitment(id, userId);
 
     await this._db.delete(commitments).where(eq(commitments.id, id));
+  }
+
+  /**
+   * Called when all required sessions for the commitment have been verified.
+   * Validates the commitment is completable, delegates payout to PayoutService,
+   * and marks the commitment as completed.
+   */
+  async completeCommitment(commitmentId: string, userId: string): Promise<Commitment> {
+    const commitment = await this.getCommitment(commitmentId, userId);
+    this.validateCompletable(commitment);
+
+    // ── Delegate payout to dedicated service ─────────────────────
+    await payoutService.issueCompletionPayout(commitment, userId);
+
+    // ── Mark commitment as completed ─────────────────────────────
+    const [updated] = await this._db
+      .update(commitments)
+      .set({ status: CommitmentStatusEnum.enum.completed })
+      .where(eq(commitments.id, commitmentId))
+      .returning();
+
+    logger.info("Commitment completed", { commitmentId, userId });
+
+    return CommitmentModel.parse(updated);
+  }
+
+  /** Validates that a commitment can be completed (must be active). */
+  private validateCompletable(commitment: Commitment): void {
+    switch (commitment.status) {
+      case CommitmentStatusEnum.enum.active:
+        return; // Only active commitments can be completed
+      case CommitmentStatusEnum.enum.completed:
+        throw new CommitmentAlreadyCompletedError();
+      case CommitmentStatusEnum.enum.cancelled:
+      case CommitmentStatusEnum.enum.cancelled_refunded:
+        throw new CommitmentAlreadyCancelledError();
+      case CommitmentStatusEnum.enum.forfeited:
+        throw new CommitmentAlreadyForfeitedError();
+      case CommitmentStatusEnum.enum.pending_payment:
+      case CommitmentStatusEnum.enum.payment_processing:
+        throw new CommitmentNotActiveError();
+      case CommitmentStatusEnum.enum.refund_pending:
+        throw new CommitmentRefundPendingError();
+    }
   }
 
   /**

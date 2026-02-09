@@ -27,3 +27,12 @@ export const DURATION_WEEKS = {
   three_weeks: 3,
   four_weeks: 4,
 } as const;
+
+/** Maps workout frequency enum to required sessions per week. */
+export const FREQUENCY_SESSIONS_PER_WEEK = {
+  three_times_a_week: 3,
+  four_times_a_week: 4,
+  five_times_a_week: 5,
+  six_times_a_week: 6,
+  seven_times_a_week: 7,
+} as const;

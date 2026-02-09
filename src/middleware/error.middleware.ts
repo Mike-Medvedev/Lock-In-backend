@@ -17,6 +17,8 @@ import {
   NoValidStripeSignatureError,
   PG_ERROR_CODES,
   SessionAlreadyExistsForDayError,
+  SessionNotInProgressError,
+  PayoutError,
   UnauthorizedDatabaseRequestError,
   ZodError,
 } from "@/shared/errors.ts";
@@ -104,6 +106,14 @@ const errorHandler: ErrorRequestHandler = function (
   if (error instanceof CommitmentNotActiveError) {
     req.log.error(error);
     return res.error(400, error);
+  }
+  if (error instanceof SessionNotInProgressError) {
+    req.log.error(error);
+    return res.error(400, error);
+  }
+  if (error instanceof PayoutError) {
+    req.log.error(error);
+    return res.error(500, error);
   }
   if (error instanceof InvalidPaymentRequestError) {
     req.log.error(error);

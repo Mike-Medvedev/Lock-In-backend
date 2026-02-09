@@ -1,6 +1,7 @@
 import express from "express";
 import { TypedRouter } from "meebo";
 import { CommitmentSessionsController } from "./commitment-sessions.controller";
+import { SessionSampleController } from "@/features/session-samples/session-sample.controller";
 import { validateUser } from "@/middleware/auth.middleware";
 import {
   CommitmentSessionModel,
@@ -8,6 +9,10 @@ import {
   CreateCommitmentSessionModel,
   UpdateCommitmentSessionStatusModel,
 } from "./commitment-sessions.model";
+import {
+  BatchSamplesModel,
+  BatchSamplesResponseModel,
+} from "@/features/session-samples/session-sample.model";
 import { IdParamsSchema } from "@/shared/validators";
 import { ErrorSchema, SuccessSchema } from "@/shared/api-responses";
 
@@ -93,12 +98,14 @@ CommitmentSessionsRouter.post(
     response: SuccessSchema(CommitmentSessionModel),
     responses: {
       200: SuccessSchema(CommitmentSessionModel),
+      400: ErrorSchema,
       401: ErrorSchema,
       403: ErrorSchema,
       404: ErrorSchema,
       500: ErrorSchema,
     },
-    summary: "Complete a commitment session",
+    summary:
+      "Complete a session: ends recording, runs verification, and checks if the commitment is now fulfilled",
   },
   CommitmentSessionsController.completeSession,
 );
@@ -118,6 +125,43 @@ CommitmentSessionsRouter.post(
     summary: "Cancel a commitment session",
   },
   CommitmentSessionsController.cancelSession,
+);
+
+// ── Session samples (GPS + motion data) ──────────────────────────────
+
+CommitmentSessionsRouter.post(
+  "/:id/samples",
+  {
+    params: IdParamsSchema,
+    request: BatchSamplesModel,
+    response: SuccessSchema(BatchSamplesResponseModel),
+    responses: {
+      201: SuccessSchema(BatchSamplesResponseModel),
+      400: ErrorSchema,
+      401: ErrorSchema,
+      403: ErrorSchema,
+      404: ErrorSchema,
+      500: ErrorSchema,
+    },
+    summary: "Batch upload GPS + motion sensor samples for a live session",
+  },
+  SessionSampleController.ingestSamples,
+);
+
+CommitmentSessionsRouter.get(
+  "/:id/samples",
+  {
+    params: IdParamsSchema,
+    responses: {
+      200: SuccessSchema(BatchSamplesResponseModel),
+      401: ErrorSchema,
+      403: ErrorSchema,
+      404: ErrorSchema,
+      500: ErrorSchema,
+    },
+    summary: "Get all samples for a session",
+  },
+  SessionSampleController.getSamples,
 );
 
 export default CommitmentSessionsRouter;

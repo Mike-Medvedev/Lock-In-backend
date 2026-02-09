@@ -127,6 +127,20 @@ export class CommitmentNotActiveError extends Error {
   }
 }
 
+export class SessionNotInProgressError extends Error {
+  constructor() {
+    super("Session is not in progress — cannot complete or upload samples");
+    this.name = "SessionNotInProgressError";
+  }
+}
+
+export class PayoutError extends Error {
+  constructor(message: string, cause?: Error) {
+    super(message, { cause });
+    this.name = "PayoutError";
+  }
+}
+
 export class InvalidPaymentRequestError extends Error {
   constructor(error: Error) {
     super("Invalid payment parameters. Please check the request and try again.", {

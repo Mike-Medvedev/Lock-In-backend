@@ -127,6 +127,13 @@
       "when": 1770670681694,
       "tag": "0017_numerous_stardust",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1770672541832,
+      "tag": "0018_cooing_omega_sentinel",
+      "breakpoints": true
     }
   ]
 }
