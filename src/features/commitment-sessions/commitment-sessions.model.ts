@@ -5,7 +5,19 @@ import {
   sessionStatus,
   verificationStatus,
 } from "@/infra/db/schema.ts";
+import { IANA_TIMEZONES } from "@/shared/constants.ts";
 import { z } from "zod";
+
+/**
+ * Validates a non-empty string that must be a valid IANA timezone.
+ *
+ */
+export const ianaTimezoneSchema = z
+  .string()
+  .min(1)
+  .refine((tz) => IANA_TIMEZONES.has(tz), {
+    message: "Must be a valid IANA timezone (e.g. America/Los_Angeles)",
+  });
 
 export const SessionStatusEnum = createSelectSchema(sessionStatus);
 export const VerificationStatusEnum = createSelectSchema(verificationStatus);
@@ -33,8 +45,8 @@ export const CommitmentSessionModel = createSelectSchema(commitmentSessions).pic
 
 export const CreateCommitmentSessionModel = z
   .object({
-    commitmentId: z.string().uuid(),
-    timezone: z.string().min(1), // IANA timezone e.g. America/Los_Angeles
+    commitmentId: z.uuid(),
+    timezone: ianaTimezoneSchema,
   })
   .strict();
 

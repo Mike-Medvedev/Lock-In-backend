@@ -1,4 +1,9 @@
 /**
+ * Valid IANA timezone identifiers (e.g. America/Los_Angeles, Europe/London).
+ */
+export const IANA_TIMEZONES = new Set(Intl.supportedValuesOf("timeZone"));
+
+/**
  * Time constants in milliseconds
  */
 export const MS = {
