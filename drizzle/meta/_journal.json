@@ -92,6 +92,13 @@
       "when": 1770614337390,
       "tag": "0012_chunky_namorita",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1770654846665,
+      "tag": "0013_talented_sumo",
+      "breakpoints": true
     }
   ]
 }

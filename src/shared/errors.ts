@@ -108,6 +108,22 @@ export class InvalidPaymentRequestError extends Error {
   }
 }
 
+/** Thrown when Stripe returns a Payment Intent or Customer Session without a client_secret. */
+export class MissingPaymentSecretError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "MissingPaymentSecretError";
+  }
+}
+
+/** Thrown when confirming a Payment Intent fails (invalid id, wrong state, Stripe error). */
+export class PaymentConfirmError extends Error {
+  constructor(message: string, cause?: Error) {
+    super(message, { cause });
+    this.name = "PaymentConfirmError";
+  }
+}
+
 export class PaymentProviderError extends Error {
   constructor(message: string, error: Error) {
     super(message, { cause: error });
@@ -123,8 +139,21 @@ export class CustomerNotFoundError extends Error {
 }
 
 export class NoValidStripeSignatureError extends Error {
-  constructor(message: string, cause?: unknown) {
-    super(message, cause !== undefined ? { cause } : undefined);
+  constructor(message: string, error?: Error) {
+    super(message, { cause: error });
     this.name = "NoValidStripeSignatureError";
+  }
+}
+/**
+ * Generic error that wraps an underlying cause. Use when wrapping Stripe/DB/other errors
+ * with a clearer message. Handled in error middleware (logs cause, responds with message).
+ */
+export class AppError extends Error {
+  statusCode: number;
+
+  constructor(message: string, cause?: Error, statusCode = 500) {
+    super(message, { cause });
+    this.name = "AppError";
+    this.statusCode = statusCode;
   }
 }

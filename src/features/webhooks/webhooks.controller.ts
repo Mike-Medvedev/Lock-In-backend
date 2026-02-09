@@ -1,6 +1,6 @@
 import Stripe from "stripe";
 import type { Request, Response } from "express";
-import { stripe } from "@/infra/payments/payments";
+import stripe from "@/infra/payments/payments.client";
 import { config } from "@/infra/config/config";
 import { NoValidStripeSignatureError } from "@/shared/errors";
 import logger from "@/infra/logger/logger";
@@ -25,10 +25,10 @@ function verifyStripeWebhook(req: Request): Stripe.Event {
       signature,
       config.STRIPE_WEBHOOK_SECRET,
     );
-  } catch (err) {
-    const message = err instanceof Error ? err.message : String(err);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
     logger.warn("Webhook signature verification failed", { message });
-    throw new NoValidStripeSignatureError("Webhook signature verification failed", err);
+    throw new NoValidStripeSignatureError("Webhook signature verification failed", error as Error);
   }
 }
 

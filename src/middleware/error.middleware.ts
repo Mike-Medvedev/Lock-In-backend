@@ -8,7 +8,9 @@ import {
   DatabaseError,
   DatabaseResourceNotFoundError,
   InvalidPaymentRequestError,
+  MissingPaymentSecretError,
   MissingTokenError,
+  PaymentConfirmError,
   MultipleActiveCommitmentsError,
   NoValidStripeSignatureError,
   PG_ERROR_CODES,
@@ -94,6 +96,14 @@ const errorHandler: ErrorRequestHandler = function (
     return res.error(400, error);
   }
   if (error instanceof InvalidPaymentRequestError) {
+    req.log.error(error);
+    return res.error(400, error);
+  }
+  if (error instanceof MissingPaymentSecretError) {
+    req.log.error(error);
+    return res.error(500, error);
+  }
+  if (error instanceof PaymentConfirmError) {
     req.log.error(error);
     return res.error(400, error);
   }

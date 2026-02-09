@@ -9,6 +9,8 @@ import UserRouter from "@/features/users/user.routes.ts";
 import TransactionRouter from "@/features/transactions/transaction.routes.ts";
 import CommitmentRouter from "@/features/commitments/commitment.routes.ts";
 import CommitmentSessionsRouter from "@/features/commitment-sessions/commitment-sessions.routes.ts";
+import PaymentsRouter from "@/features/payments/payments.routes.ts";
+import PoolRouter from "@/features/pool/pool.routes.ts";
 import Webhook from "@/features/webhooks/webhooks.routes";
 import errorHandler from "@/middleware/error.middleware.ts";
 import logger from "@/infra/logger/logger";
@@ -63,6 +65,8 @@ v1Router.use("/users", UserRouter);
 v1Router.use("/transactions", TransactionRouter);
 v1Router.use("/commitments", CommitmentRouter);
 v1Router.use("/commitment-sessions", CommitmentSessionsRouter);
+v1Router.use("/payments", PaymentsRouter);
+v1Router.use("/pool", PoolRouter);
 app.use("/api/v1", v1Router);
 app.use(swagger("Lock In", { bearerAuth: true, version: packageJson.version }));
 
@@ -81,8 +85,8 @@ app.get("/health", (_, res) => {
 
 app.use(errorHandler);
 
-const server = app.listen(3000, "0.0.0.0", (): void => {
-  logger.info(`Server listening on port ${3000}`);
+const server = app.listen(config.PORT, "0.0.0.0", (): void => {
+  logger.info(`Server listening on port ${config.PORT}`);
 });
 if (config.NODE_ENV === "production") {
   gracefulShutdown(server);

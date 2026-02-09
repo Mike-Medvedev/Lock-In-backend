@@ -64,12 +64,15 @@ export const verificationStatus = pgEnum("verification_status", [
 
 export const transactionType = pgEnum("transaction_type", ["stake", "payout", "forfeit", "rake"]);
 
+export const transactionStatus = pgEnum("transaction_status", ["pending", "succeeded", "failed"]);
+
 export const users = pgTable("users", {
   id: uuid().primaryKey(), // UUID from Supabase Auth - no default, you provide it
   firstName: varchar("first_name"),
   lastName: varchar("last_name"),
   phone: varchar("phone").unique(),
   email: text().unique(),
+  stripeCustomerId: text("stripe_customer_id"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   isPremium: boolean().default(false),
@@ -192,7 +195,8 @@ export const transactions = pgTable(
       .notNull()
       .references(() => commitments.id, { onDelete: "cascade" }),
     transactionType: transactionType("transaction_type").notNull(),
-    stripeCustomerId: text("stripe_customer_id").notNull(),
+    status: transactionStatus("status").notNull().default("pending"),
+    stripeCustomerId: text("stripe_customer_id"), // nullable for guest payments
     stripeTransactionId: text("stripe_transaction_id").notNull(),
     amount: bigint("amount", { mode: "number" }).notNull(), // > 50 cents
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
