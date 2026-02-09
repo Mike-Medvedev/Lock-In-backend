@@ -2,13 +2,14 @@ import "dotenv/config";
 import { config } from "@/infra/config/config";
 import "@root/sentry.config.js";
 import "@root/meebo.config";
-import express, { json } from "express";
+import express, { json, raw } from "express";
 import cors from "cors";
 import { requestLogger } from "@/middleware/logger.middleware.ts";
 import UserRouter from "@/features/users/user.routes.ts";
 import TransactionRouter from "@/features/transactions/transaction.routes.ts";
 import CommitmentRouter from "@/features/commitments/commitment.routes.ts";
 import CommitmentSessionsRouter from "@/features/commitment-sessions/commitment-sessions.routes.ts";
+import Webhook from "@/features/webhooks/webhooks.routes";
 import errorHandler from "@/middleware/error.middleware.ts";
 import logger from "@/infra/logger/logger";
 import helmet from "helmet";
@@ -50,9 +51,13 @@ app.use(requestLogger);
 app.use(helmet());
 app.use(compression({ threshold: "1kb" }));
 app.use(cors(corsOptions));
+app.use(responseHelpers);
+
+//TODO MAKE WEBHOOK PART OF V1ROUTER BY CHANGING ENDPOINT URL REGISTERED WITH STRIPE TO USE /API/V1
+// Webhook must receive raw body for Stripe signature verification; mount before json()
+app.use("/webhook", raw({ type: "application/json" }), Webhook);
 app.use(json({ limit: "100kb" }));
 app.use(limiter);
-app.use(responseHelpers);
 
 v1Router.use("/users", UserRouter);
 v1Router.use("/transactions", TransactionRouter);

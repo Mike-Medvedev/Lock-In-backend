@@ -9,6 +9,8 @@ const envSchema = z.object({
   SUPABASE_PROJECT_URL: z.url(),
   SUPABASE_PUBLISHABLE_KEY: z.string().min(1),
   SENTRY_KEY: z.string(),
+  STRIPE_API_KEY: z.string(),
+  STRIPE_WEBHOOK_SECRET: z.string().min(1).startsWith("whsec_"),
 });
 
 const parsed = envSchema.safeParse(process.env);

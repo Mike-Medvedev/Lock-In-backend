@@ -98,3 +98,33 @@ export class CommitmentNotActiveError extends Error {
     this.name = "CommitmentNotActiveError";
   }
 }
+
+export class InvalidPaymentRequestError extends Error {
+  constructor(error: Error) {
+    super("Invalid payment parameters. Please check the request and try again.", {
+      cause: error,
+    });
+    this.name = "InvalidPaymentRequestError";
+  }
+}
+
+export class PaymentProviderError extends Error {
+  constructor(message: string, error: Error) {
+    super(message, { cause: error });
+    this.name = "PaymentProviderError";
+  }
+}
+
+export class CustomerNotFoundError extends Error {
+  constructor(error: Error) {
+    super("Requested Customer not found", { cause: error });
+    this.name = "CustomerNotFound";
+  }
+}
+
+export class NoValidStripeSignatureError extends Error {
+  constructor(message: string, cause?: unknown) {
+    super(message, cause !== undefined ? { cause } : undefined);
+    this.name = "NoValidStripeSignatureError";
+  }
+}
