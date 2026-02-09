@@ -1,9 +1,6 @@
 import type { Request, Response, NextFunction } from "express";
 import { commitmentSessionService } from "./commitment-sessions.service";
-import type {
-  CreateCommitmentSession,
-  UpdateCommitmentSessionStatus,
-} from "./commitment-sessions.model";
+import type { CreateCommitmentSession } from "./commitment-sessions.model";
 import { validateIdParams } from "@/shared/validators";
 
 export const CommitmentSessionsController = {
@@ -37,17 +34,6 @@ export const CommitmentSessionsController = {
     }
   },
 
-  async updateSessionStatus(req: Request, res: Response, next: NextFunction) {
-    try {
-      const id = validateIdParams(req.params);
-      const body = req.body as UpdateCommitmentSessionStatus;
-      const session = await commitmentSessionService.updateSessionStatus(id, req.user!.id, body);
-      res.success(session);
-    } catch (error) {
-      next(error);
-    }
-  },
-
   async completeSession(req: Request, res: Response, next: NextFunction) {
     try {
       const id = validateIdParams(req.params);
@@ -62,6 +48,36 @@ export const CommitmentSessionsController = {
     try {
       const id = validateIdParams(req.params);
       const session = await commitmentSessionService.cancelSession(id, req.user!.id);
+      res.success(session);
+    } catch (error) {
+      next(error);
+    }
+  },
+
+  async pauseSession(req: Request, res: Response, next: NextFunction) {
+    try {
+      const id = validateIdParams(req.params);
+      const session = await commitmentSessionService.pauseSession(id, req.user!.id);
+      res.success(session);
+    } catch (error) {
+      next(error);
+    }
+  },
+
+  async resumeSession(req: Request, res: Response, next: NextFunction) {
+    try {
+      const id = validateIdParams(req.params);
+      const session = await commitmentSessionService.resumeSession(id, req.user!.id);
+      res.success(session);
+    } catch (error) {
+      next(error);
+    }
+  },
+
+  async verifySession(req: Request, res: Response, next: NextFunction) {
+    try {
+      const id = validateIdParams(req.params);
+      const session = await commitmentSessionService.verifySession(id, req.user!.id);
       res.success(session);
     } catch (error) {
       next(error);

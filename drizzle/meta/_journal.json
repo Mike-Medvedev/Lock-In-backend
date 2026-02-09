@@ -134,6 +134,13 @@
       "when": 1770672541832,
       "tag": "0018_cooing_omega_sentinel",
       "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1770674571250,
+      "tag": "0019_loving_mulholland_black",
+      "breakpoints": true
     }
   ]
 }

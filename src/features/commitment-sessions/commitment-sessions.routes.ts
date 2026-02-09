@@ -7,7 +7,6 @@ import {
   CommitmentSessionModel,
   CommitmentSessionsArray,
   CreateCommitmentSessionModel,
-  UpdateCommitmentSessionStatusModel,
 } from "./commitment-sessions.model";
 import {
   BatchSamplesModel,
@@ -72,25 +71,6 @@ CommitmentSessionsRouter.post(
   CommitmentSessionsController.createSession,
 );
 
-CommitmentSessionsRouter.patch(
-  "/:id",
-  {
-    params: IdParamsSchema,
-    request: UpdateCommitmentSessionStatusModel,
-    response: SuccessSchema(CommitmentSessionModel),
-    responses: {
-      200: SuccessSchema(CommitmentSessionModel),
-      400: ErrorSchema,
-      401: ErrorSchema,
-      403: ErrorSchema,
-      404: ErrorSchema,
-      500: ErrorSchema,
-    },
-    summary: "Update commitment session status",
-  },
-  CommitmentSessionsController.updateSessionStatus,
-);
-
 CommitmentSessionsRouter.post(
   "/:id/complete",
   {
@@ -102,10 +82,10 @@ CommitmentSessionsRouter.post(
       401: ErrorSchema,
       403: ErrorSchema,
       404: ErrorSchema,
+      409: ErrorSchema,
       500: ErrorSchema,
     },
-    summary:
-      "Complete a session: ends recording, runs verification, and checks if the commitment is now fulfilled",
+    summary: "Complete a session: ends recording and marks verification as pending",
   },
   CommitmentSessionsController.completeSession,
 );
@@ -117,14 +97,73 @@ CommitmentSessionsRouter.post(
     response: SuccessSchema(CommitmentSessionModel),
     responses: {
       200: SuccessSchema(CommitmentSessionModel),
+      400: ErrorSchema,
       401: ErrorSchema,
       403: ErrorSchema,
       404: ErrorSchema,
+      409: ErrorSchema,
       500: ErrorSchema,
     },
-    summary: "Cancel a commitment session",
+    summary: "Cancel a session (from in_progress or paused)",
   },
   CommitmentSessionsController.cancelSession,
+);
+
+CommitmentSessionsRouter.post(
+  "/:id/pause",
+  {
+    params: IdParamsSchema,
+    response: SuccessSchema(CommitmentSessionModel),
+    responses: {
+      200: SuccessSchema(CommitmentSessionModel),
+      400: ErrorSchema,
+      401: ErrorSchema,
+      403: ErrorSchema,
+      404: ErrorSchema,
+      409: ErrorSchema,
+      500: ErrorSchema,
+    },
+    summary: "Pause a session (only from in_progress)",
+  },
+  CommitmentSessionsController.pauseSession,
+);
+
+CommitmentSessionsRouter.post(
+  "/:id/resume",
+  {
+    params: IdParamsSchema,
+    response: SuccessSchema(CommitmentSessionModel),
+    responses: {
+      200: SuccessSchema(CommitmentSessionModel),
+      400: ErrorSchema,
+      401: ErrorSchema,
+      403: ErrorSchema,
+      404: ErrorSchema,
+      409: ErrorSchema,
+      500: ErrorSchema,
+    },
+    summary: "Resume a paused session back to in_progress",
+  },
+  CommitmentSessionsController.resumeSession,
+);
+
+CommitmentSessionsRouter.post(
+  "/:id/verify",
+  {
+    params: IdParamsSchema,
+    response: SuccessSchema(CommitmentSessionModel),
+    responses: {
+      200: SuccessSchema(CommitmentSessionModel),
+      400: ErrorSchema,
+      401: ErrorSchema,
+      403: ErrorSchema,
+      404: ErrorSchema,
+      409: ErrorSchema,
+      500: ErrorSchema,
+    },
+    summary: "Verify a completed session: runs fraud checks and updates verification status",
+  },
+  CommitmentSessionsController.verifySession,
 );
 
 // ── Session samples (GPS + motion data) ──────────────────────────────

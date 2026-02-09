@@ -1,0 +1,2 @@
+ALTER TABLE "commitment_sessions" DROP CONSTRAINT "one_session_per_commitment_per_day";--> statement-breakpoint
+CREATE UNIQUE INDEX "one_active_session_per_commitment_per_day" ON "commitment_sessions" USING btree ("commitment_id","counting_day") WHERE "commitment_sessions"."session_status" != 'cancelled';

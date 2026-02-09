@@ -134,6 +134,55 @@ export class SessionNotInProgressError extends Error {
   }
 }
 
+export class SessionAlreadyActiveError extends Error {
+  constructor() {
+    super("An in-progress or paused session already exists for this commitment");
+    this.name = "SessionAlreadyActiveError";
+  }
+}
+
+export class SessionAlreadyCompletedError extends Error {
+  constructor() {
+    super("Session has already been completed");
+    this.name = "SessionAlreadyCompletedError";
+  }
+}
+
+export class SessionAlreadyCancelledError extends Error {
+  constructor() {
+    super("Session has already been cancelled");
+    this.name = "SessionAlreadyCancelledError";
+  }
+}
+
+export class SessionAlreadyPausedError extends Error {
+  constructor() {
+    super("Session is already paused");
+    this.name = "SessionAlreadyPausedError";
+  }
+}
+
+export class SessionNotPausedError extends Error {
+  constructor() {
+    super("Session is not paused — cannot resume");
+    this.name = "SessionNotPausedError";
+  }
+}
+
+export class SessionNotCompletedError extends Error {
+  constructor() {
+    super("Session is not completed — cannot verify");
+    this.name = "SessionNotCompletedError";
+  }
+}
+
+export class SessionAlreadyVerifiedError extends Error {
+  constructor() {
+    super("Session has already been verified");
+    this.name = "SessionAlreadyVerifiedError";
+  }
+}
+
 export class PayoutError extends Error {
   constructor(message: string, cause?: Error) {
     super(message, { cause });

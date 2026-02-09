@@ -1,4 +1,4 @@
-import { createSelectSchema, createUpdateSchema } from "drizzle-zod";
+import { createSelectSchema } from "drizzle-zod";
 import {
   commitmentSessions,
   sessionGoalType,
@@ -50,20 +50,10 @@ export const CreateCommitmentSessionModel = z
   })
   .strict();
 
-export const UpdateCommitmentSessionStatusModel = createUpdateSchema(commitmentSessions)
-  .pick({
-    sessionStatus: true,
-    verificationStatus: true,
-    actualValue: true,
-    reviewNotes: true,
-  })
-  .strict();
-
 export const CommitmentSessionsArray = z.array(CommitmentSessionModel);
 
 export type CommitmentSession = z.infer<typeof CommitmentSessionModel>;
 export type CreateCommitmentSession = z.infer<typeof CreateCommitmentSessionModel>;
-export type UpdateCommitmentSessionStatus = z.infer<typeof UpdateCommitmentSessionStatusModel>;
 export type SessionStatus = z.infer<typeof SessionStatusEnum>;
 export type VerificationStatus = z.infer<typeof VerificationStatusEnum>;
 export type SessionGoalType = z.infer<typeof SessionGoalEnum>;

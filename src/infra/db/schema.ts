@@ -8,7 +8,7 @@ import {
   timestamp,
   doublePrecision,
   index,
-  unique,
+  uniqueIndex,
   uuid,
   text,
   date,
@@ -136,7 +136,9 @@ export const commitmentSessions = pgTable(
     reviewNotes: text("review_notes"),
   },
   (table) => [
-    unique("one_session_per_commitment_per_day").on(table.commitmentId, table.countingDay),
+    uniqueIndex("one_active_session_per_commitment_per_day")
+      .on(table.commitmentId, table.countingDay)
+      .where(sql`${table.sessionStatus} != 'cancelled'`),
   ],
 );
 

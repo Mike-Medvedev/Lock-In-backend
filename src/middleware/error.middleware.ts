@@ -18,6 +18,13 @@ import {
   PG_ERROR_CODES,
   SessionAlreadyExistsForDayError,
   SessionNotInProgressError,
+  SessionAlreadyActiveError,
+  SessionAlreadyCompletedError,
+  SessionAlreadyCancelledError,
+  SessionAlreadyPausedError,
+  SessionNotPausedError,
+  SessionNotCompletedError,
+  SessionAlreadyVerifiedError,
   PayoutError,
   UnauthorizedDatabaseRequestError,
   ZodError,
@@ -110,6 +117,34 @@ const errorHandler: ErrorRequestHandler = function (
   if (error instanceof SessionNotInProgressError) {
     req.log.error(error);
     return res.error(400, error);
+  }
+  if (error instanceof SessionAlreadyActiveError) {
+    req.log.error(error);
+    return res.error(409, error);
+  }
+  if (error instanceof SessionAlreadyCompletedError) {
+    req.log.error(error);
+    return res.error(409, error);
+  }
+  if (error instanceof SessionAlreadyCancelledError) {
+    req.log.error(error);
+    return res.error(409, error);
+  }
+  if (error instanceof SessionAlreadyPausedError) {
+    req.log.error(error);
+    return res.error(409, error);
+  }
+  if (error instanceof SessionNotPausedError) {
+    req.log.error(error);
+    return res.error(400, error);
+  }
+  if (error instanceof SessionNotCompletedError) {
+    req.log.error(error);
+    return res.error(400, error);
+  }
+  if (error instanceof SessionAlreadyVerifiedError) {
+    req.log.error(error);
+    return res.error(409, error);
   }
   if (error instanceof PayoutError) {
     req.log.error(error);
