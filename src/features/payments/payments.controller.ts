@@ -1,5 +1,6 @@
 import type { Request, Response, NextFunction } from "express";
 import { paymentService } from "@/features/payments/payments.service";
+import { transactionService } from "@/features/transactions/transaction.service";
 import { config } from "@/infra/config/config";
 import { MissingPaymentSecretError } from "@/shared/errors";
 
@@ -17,6 +18,7 @@ export const PaymentsController = {
         customer: customer.id,
         payment_method: body.paymentMethodId,
         automatic_payment_methods: { enabled: true, allow_redirects: "never" },
+        metadata: { commitmentId: body.commitmentId, userId: req.user!.id },
       });
 
       if (!paymentIntent.client_secret) {
@@ -24,6 +26,15 @@ export const PaymentsController = {
           `Payment Intent ${paymentIntent.id} missing client_secret — cannot complete payment`,
         );
       }
+
+      await transactionService.create({
+        userId: req.user!.id,
+        commitmentId: body.commitmentId,
+        stripeTransactionId: paymentIntent.id,
+        stripeCustomerId: customer.id,
+        amount: body.amount,
+        transactionType: "stake",
+      });
 
       const { client_secret: customerSessionClientSecret } =
         await paymentService.createCustomerSession(customer.id);

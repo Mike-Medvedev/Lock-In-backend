@@ -4,6 +4,8 @@ import stripe from "@/infra/payments/payments.client";
 import { config } from "@/infra/config/config";
 import { NoValidStripeSignatureError } from "@/shared/errors";
 import logger from "@/infra/logger/logger";
+import { transactionService } from "@/features/transactions/transaction.service";
+import { poolService } from "@/features/pool/pool.service";
 
 const STRIPE_SIGNATURE_HEADER = "stripe-signature";
 
@@ -35,7 +37,7 @@ function verifyStripeWebhook(req: Request): Stripe.Event {
 /**
  * Handles a verified Stripe event by type
  */
-function handleEventByType(event: Stripe.Event): void {
+async function handleEventByType(event: Stripe.Event): Promise<void> {
   switch (event.type) {
     case "payment_intent.succeeded": {
       const paymentIntent = event.data.object as Stripe.PaymentIntent;
@@ -44,7 +46,8 @@ function handleEventByType(event: Stripe.Event): void {
         amount: paymentIntent.amount,
         metadata: paymentIntent.metadata,
       });
-      // TODO: insert stake transaction, update pool using paymentIntent.metadata.commitmentId / userId
+      await transactionService.updateStatusByStripeId(paymentIntent.id, "succeeded");
+      await poolService.addStake(paymentIntent.amount);
       break;
     }
     case "payment_intent.payment_failed": {
@@ -53,6 +56,7 @@ function handleEventByType(event: Stripe.Event): void {
         paymentIntentId: paymentIntent.id,
         lastPaymentError: paymentIntent.last_payment_error,
       });
+      await transactionService.updateStatusByStripeId(paymentIntent.id, "failed");
       break;
     }
     default:
@@ -63,7 +67,7 @@ function handleEventByType(event: Stripe.Event): void {
 export const WebhookController = {
   async handleStripeEvent(req: Request, res: Response): Promise<void> {
     const event = verifyStripeWebhook(req);
-    handleEventByType(event);
+    await handleEventByType(event);
     res.sendStatus(200);
   },
 };

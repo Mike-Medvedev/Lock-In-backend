@@ -13,6 +13,7 @@ export const CreatePaymentRequestSchema = CustomerCreateParamsSchema.extend({
   amount: z.number().int().positive(),
   currency: z.string().length(3),
   paymentMethodId: z.string().min(1, "paymentMethodId is required"),
+  commitmentId: z.uuid(),
 });
 
 export const CreatePaymentResponseSchema = z.object({
