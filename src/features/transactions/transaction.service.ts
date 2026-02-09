@@ -1,12 +1,34 @@
 import { db, type DB } from "@/infra/db/db.ts";
 import { transactions } from "@/infra/db/schema";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import type { z } from "zod";
 import { TransactionModel, type CreateTransactionParams } from "./transaction.model";
 import { DatabaseResourceNotFoundError } from "@/shared/errors";
 
+export type TransactionRow = z.infer<typeof TransactionModel>;
+
 class TransactionService {
   constructor(private readonly _db: DB) {}
+
+  async findStakeByCommitmentId(commitmentId: string): Promise<TransactionRow | null> {
+    const [row] = await this._db
+      .select()
+      .from(transactions)
+      .where(
+        and(eq(transactions.commitmentId, commitmentId), eq(transactions.transactionType, "stake")),
+      )
+      .limit(1);
+    return (row as TransactionRow) ?? null;
+  }
+
+  async getByStripeTransactionId(stripeTransactionId: string): Promise<TransactionRow | null> {
+    const [row] = await this._db
+      .select()
+      .from(transactions)
+      .where(eq(transactions.stripeTransactionId, stripeTransactionId))
+      .limit(1);
+    return (row as TransactionRow) ?? null;
+  }
 
   async create(params: CreateTransactionParams): Promise<z.infer<typeof TransactionModel>> {
     const [row] = await this._db

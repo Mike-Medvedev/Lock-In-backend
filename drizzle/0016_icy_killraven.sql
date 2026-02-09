@@ -1,0 +1,1 @@
+ALTER TABLE "commitments" DROP CONSTRAINT "one_commitment_per_user";

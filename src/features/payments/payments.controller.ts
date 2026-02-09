@@ -1,5 +1,6 @@
 import type { Request, Response, NextFunction } from "express";
 import { paymentService } from "@/features/payments/payments.service";
+import { commitmentService } from "@/features/commitments/commitment.service";
 import { transactionService } from "@/features/transactions/transaction.service";
 import { config } from "@/infra/config/config";
 import { MissingPaymentSecretError } from "@/shared/errors";
@@ -9,6 +10,9 @@ export const PaymentsController = {
     try {
       const userId = req.user!.id;
       const body = req.body;
+
+      // Validate commitment is active and not already staked
+      await commitmentService.validateStakeable(body.commitmentId, userId);
 
       const customer = await paymentService.getOrCreateCustomer(userId);
 
@@ -34,6 +38,11 @@ export const PaymentsController = {
         stripeCustomerId: customer.id,
         amount: body.amount,
         transactionType: "stake",
+      });
+
+      // Mark commitment as payment_processing now that we've submitted to Stripe
+      await commitmentService.updateCommitment(body.commitmentId, userId, {
+        status: "payment_processing",
       });
 
       const { client_secret: customerSessionClientSecret } =

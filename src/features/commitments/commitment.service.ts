@@ -1,4 +1,4 @@
-import { eq, and } from "drizzle-orm";
+import { eq, and, inArray } from "drizzle-orm";
 import { db, type DB } from "@/infra/db/db.ts";
 import { commitments } from "@/infra/db/schema.ts";
 
@@ -15,10 +15,17 @@ import {
   CommitmentAlreadyCancelledError,
   CommitmentAlreadyCompletedError,
   CommitmentAlreadyForfeitedError,
+  CommitmentAlreadyStakedError,
+  CommitmentPaymentPendingError,
+  CommitmentRefundPendingError,
   DatabaseResourceNotFoundError,
   MultipleActiveCommitmentsError,
   UnauthorizedDatabaseRequestError,
 } from "@/shared/errors.ts";
+import { paymentService } from "@/features/payments/payments.service";
+import { poolService } from "@/features/pool/pool.service";
+import { TransactionStatusEnum } from "@/features/transactions/transaction.model";
+import { transactionService } from "@/features/transactions/transaction.service";
 
 class CommitmentService {
   constructor(private readonly _db: DB) {}
@@ -32,6 +39,20 @@ class CommitmentService {
       .select()
       .from(commitments)
       .where(and(eq(commitments.userId, userId), eq(commitments.status, "active")));
+    return results.map((c) => CommitmentModel.parse(c));
+  }
+
+  /** Returns commitments that are in-progress (not terminal). */
+  async getOngoingCommitments(userId: string): Promise<Commitment[]> {
+    const results = await this._db
+      .select()
+      .from(commitments)
+      .where(
+        and(
+          eq(commitments.userId, userId),
+          inArray(commitments.status, ["pending_payment", "payment_processing", "active"]),
+        ),
+      );
     return results.map((c) => CommitmentModel.parse(c));
   }
 
@@ -50,8 +71,8 @@ class CommitmentService {
   }
 
   async createCommitment(userId: string, input: CreateCommitment): Promise<Commitment> {
-    // user cannot have more than 1 active commitment
-    if ((await this.getActiveCommitments(userId)).length > 1) {
+    // user cannot have more than 1 ongoing commitment
+    if ((await this.getOngoingCommitments(userId)).length >= 1) {
       throw new MultipleActiveCommitmentsError();
     }
 
@@ -60,6 +81,7 @@ class CommitmentService {
       .values({
         ...input,
         userId,
+        status: "pending_payment",
       })
       .returning();
 
@@ -85,10 +107,24 @@ class CommitmentService {
   async getCancelPreview(commitmentId: string, userId: string): Promise<CancelPreview> {
     const commitment = await this.getCommitment(commitmentId, userId);
     this.validateCancellable(commitment);
+
+    // No payment yet — free cancel
+    if (commitment.status === CommitmentStatusEnum.enum.pending_payment) {
+      return {
+        id: commitment.id,
+        cancellable: true,
+        refundable: false,
+        forfeitAmount: 0,
+        stakeAmount: commitment.stakeAmount,
+        gracePeriodEndsAt: commitment.gracePeriodEndsAt,
+      };
+    }
+
     const refundable = this.isRefundable(commitment);
 
     return {
       id: commitment.id,
+      cancellable: true,
       refundable,
       forfeitAmount: refundable ? 0 : commitment.stakeAmount,
       stakeAmount: commitment.stakeAmount,
@@ -99,28 +135,83 @@ class CommitmentService {
   async cancelCommitment(commitmentId: string, userId: string): Promise<CancelResult> {
     const commitment = await this.getCommitment(commitmentId, userId);
     this.validateCancellable(commitment);
-    const refundable = this.isRefundable(commitment);
 
-    if (refundable) {
+    // No payment yet — just cancel, nothing to refund or forfeit
+    if (commitment.status === CommitmentStatusEnum.enum.pending_payment) {
       await this._db
         .update(commitments)
         .set({ status: CommitmentStatusEnum.enum.cancelled })
         .where(eq(commitments.id, commitmentId));
 
-      // TODO: Process refund via Stripe
+      return {
+        id: commitment.id,
+        refunded: false,
+        forfeitedAmount: 0,
+        status: CommitmentStatusEnum.enum.cancelled,
+      };
+    }
+
+    const stake = await transactionService.findStakeByCommitmentId(commitmentId);
+
+    // If no stake or stake never succeeded, nothing to refund/forfeit — just cancel
+    if (!stake || stake.status !== "succeeded") {
+      await this._db
+        .update(commitments)
+        .set({ status: CommitmentStatusEnum.enum.cancelled })
+        .where(eq(commitments.id, commitmentId));
+
+      return {
+        id: commitment.id,
+        refunded: false,
+        forfeitedAmount: 0,
+        status: CommitmentStatusEnum.enum.cancelled,
+      };
+    }
+
+    const refundable = this.isRefundable(commitment);
+
+    if (refundable) {
+      const refund = await paymentService.createRefund(stake.stripeTransactionId);
+      await transactionService.create({
+        userId,
+        commitmentId,
+        stripeTransactionId: refund.id,
+        stripeCustomerId: stake.stripeCustomerId,
+        amount: refund.amount,
+        transactionType: "refund",
+      });
+
+      await this._db
+        .update(commitments)
+        .set({ status: CommitmentStatusEnum.enum.refund_pending })
+        .where(eq(commitments.id, commitmentId));
+
       return {
         id: commitment.id,
         refunded: true,
         forfeitedAmount: 0,
-        status: CommitmentStatusEnum.enum.cancelled,
+        status: CommitmentStatusEnum.enum.refund_pending,
       };
     } else {
+      const forfeitTxId = `forfeit_${commitmentId}`;
+      await transactionService.create({
+        userId,
+        commitmentId,
+        stripeTransactionId: forfeitTxId,
+        stripeCustomerId: stake.stripeCustomerId,
+        amount: commitment.stakeAmount,
+        transactionType: "forfeit",
+      });
+      await transactionService.updateStatusByStripeId(
+        forfeitTxId,
+        TransactionStatusEnum.enum.succeeded,
+      );
+      await poolService.addForfeit(commitment.stakeAmount);
       await this._db
         .update(commitments)
         .set({ status: CommitmentStatusEnum.enum.forfeited })
         .where(eq(commitments.id, commitmentId));
 
-      // TODO: Add forfeited amount to pool
       return {
         id: commitment.id,
         refunded: false,
@@ -136,18 +227,50 @@ class CommitmentService {
     await this._db.delete(commitments).where(eq(commitments.id, id));
   }
 
+  /**
+   * Validates that a commitment can accept a new stake payment.
+   * The commitment must be "pending_payment" and must not already have a pending/succeeded stake.
+   */
+  async validateStakeable(commitmentId: string, userId: string): Promise<Commitment> {
+    const commitment = await this.getCommitment(commitmentId, userId);
+
+    // Only pending_payment commitments can be staked
+    switch (commitment.status) {
+      case CommitmentStatusEnum.enum.payment_processing:
+        throw new CommitmentPaymentPendingError();
+      case CommitmentStatusEnum.enum.active:
+        throw new CommitmentAlreadyStakedError();
+      case CommitmentStatusEnum.enum.cancelled:
+      case CommitmentStatusEnum.enum.cancelled_refunded:
+        throw new CommitmentAlreadyCancelledError();
+      case CommitmentStatusEnum.enum.forfeited:
+        throw new CommitmentAlreadyForfeitedError();
+      case CommitmentStatusEnum.enum.completed:
+        throw new CommitmentAlreadyCompletedError();
+      case CommitmentStatusEnum.enum.refund_pending:
+        throw new CommitmentRefundPendingError();
+    }
+
+    return commitment;
+  }
+
   private isRefundable(commitment: Commitment): boolean {
     return new Date() < commitment.gracePeriodEndsAt;
   }
 
   private validateCancellable(commitment: Commitment): void {
     switch (commitment.status) {
+      case CommitmentStatusEnum.enum.payment_processing:
+        throw new CommitmentPaymentPendingError();
       case CommitmentStatusEnum.enum.cancelled:
+      case CommitmentStatusEnum.enum.cancelled_refunded:
         throw new CommitmentAlreadyCancelledError();
       case CommitmentStatusEnum.enum.forfeited:
         throw new CommitmentAlreadyForfeitedError();
       case CommitmentStatusEnum.enum.completed:
         throw new CommitmentAlreadyCompletedError();
+      case CommitmentStatusEnum.enum.refund_pending:
+        throw new CommitmentRefundPendingError();
     }
   }
 }

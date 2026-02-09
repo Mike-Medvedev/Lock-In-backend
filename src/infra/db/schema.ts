@@ -41,10 +41,14 @@ export const sessionGoalType = pgEnum("session_goal_type", [
 ]);
 
 export const commitmentStatus = pgEnum("commitment_status", [
+  "pending_payment",
+  "payment_processing",
   "active",
   "completed",
   "forfeited",
   "cancelled",
+  "cancelled_refunded",
+  "refund_pending",
 ]);
 
 export const sessionStatus = pgEnum("session_status", [
@@ -62,7 +66,13 @@ export const verificationStatus = pgEnum("verification_status", [
   "succeeded",
 ]);
 
-export const transactionType = pgEnum("transaction_type", ["stake", "payout", "forfeit", "rake"]);
+export const transactionType = pgEnum("transaction_type", [
+  "stake",
+  "payout",
+  "forfeit",
+  "rake",
+  "refund",
+]);
 
 export const transactionStatus = pgEnum("transaction_status", ["pending", "succeeded", "failed"]);
 
@@ -94,13 +104,10 @@ export const commitments = pgTable(
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     stakeAmount: bigint("stake_amount", { mode: "number" }).notNull(), // 50-10000 cents
     lockedBonusAmount: bigint("locked_bonus_amount", { mode: "number" }).notNull().default(0),
-    status: commitmentStatus().notNull().default("active"),
+    status: commitmentStatus().notNull().default("pending_payment"),
     gracePeriodEndsAt: timestamp("grace_period_ends_at", { withTimezone: true }).notNull(), // createdAt + 1 day
   },
-  (table) => [
-    check("stake_amount_check", sql`${table.stakeAmount} between 50 and 10000`),
-    unique("one_commitment_per_user").on(table.userId),
-  ],
+  (table) => [check("stake_amount_check", sql`${table.stakeAmount} between 50 and 10000`)],
 );
 
 export const commitmentSessions = pgTable(
@@ -206,7 +213,10 @@ export const transactions = pgTable(
 
 export const pool = pgTable("pool", {
   id: uuid().primaryKey().defaultRandom(),
-  balance: doublePrecision("balance").notNull().default(0), // Running balance in dollars
+  /** Stakes we're holding (owed back to users if they complete or get refunded). In dollars. */
+  stakesHeld: doublePrecision("stakes_held").notNull().default(0),
+  /** Actual pool money from forfeits (and rake); funds completion bonuses. In dollars. */
+  balance: doublePrecision("balance").notNull().default(0),
   totalRakeCollected: doublePrecision("total_rake_collected").notNull().default(0), // 20% of all forfeitures
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),

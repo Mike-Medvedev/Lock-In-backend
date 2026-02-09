@@ -85,6 +85,34 @@ export class CommitmentAlreadyCompletedError extends Error {
   }
 }
 
+export class CommitmentPaymentNotFoundError extends Error {
+  constructor() {
+    super("No payment found for this commitment; cannot refund");
+    this.name = "CommitmentPaymentNotFoundError";
+  }
+}
+
+export class CommitmentRefundPendingError extends Error {
+  constructor() {
+    super("Refund is already in progress for this commitment");
+    this.name = "CommitmentRefundPendingError";
+  }
+}
+
+export class CommitmentAlreadyStakedError extends Error {
+  constructor() {
+    super("A payment has already been made for this commitment");
+    this.name = "CommitmentAlreadyStakedError";
+  }
+}
+
+export class CommitmentPaymentPendingError extends Error {
+  constructor() {
+    super("Payment is still processing. Please wait for it to settle before cancelling.");
+    this.name = "CommitmentPaymentPendingError";
+  }
+}
+
 export class SessionAlreadyExistsForDayError extends Error {
   constructor() {
     super("A session already exists for this commitment on this day");

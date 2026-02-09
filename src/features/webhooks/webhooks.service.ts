@@ -4,6 +4,11 @@ import stripe from "@/infra/payments/payments.client";
 import { config } from "@/infra/config/config";
 import { NoValidStripeSignatureError } from "@/shared/errors";
 import logger from "@/infra/logger/logger";
+import { db } from "@/infra/db/db";
+import { commitments } from "@/infra/db/schema";
+import { eq } from "drizzle-orm";
+import { CommitmentStatusEnum } from "@/features/commitments/commitment.model";
+import { TransactionStatusEnum } from "@/features/transactions/transaction.model";
 import { transactionService } from "@/features/transactions/transaction.service";
 import { poolService } from "@/features/pool/pool.service";
 
@@ -14,7 +19,7 @@ class WebhookService {
    * Verifies the Stripe webhook signature and returns the parsed event.
    * @throws {NoValidStripeSignatureError} when signature is missing or verification fails
    */
-  private verifyAndParse(req: Request): Stripe.Event {
+  verifyAndParse(req: Request): Stripe.Event {
     const signature = req.headers[STRIPE_SIGNATURE_HEADER];
 
     if (typeof signature !== "string") {
@@ -38,7 +43,8 @@ class WebhookService {
     }
   }
 
-  private async handleEvent(event: Stripe.Event): Promise<void> {
+  async handleEvent(event: Stripe.Event): Promise<void> {
+    logger.info("Stripe webhook event received", { type: event.type, id: event.id });
     switch (event.type) {
       case "payment_intent.succeeded": {
         const paymentIntent = event.data.object as Stripe.PaymentIntent;
@@ -47,8 +53,21 @@ class WebhookService {
           amount: paymentIntent.amount,
           metadata: paymentIntent.metadata,
         });
-        await transactionService.updateStatusByStripeId(paymentIntent.id, "succeeded");
+        await transactionService.updateStatusByStripeId(
+          paymentIntent.id,
+          TransactionStatusEnum.enum.succeeded,
+        );
         await poolService.addStake(paymentIntent.amount);
+
+        // Activate the commitment now that payment is confirmed
+        const { commitmentId } = paymentIntent.metadata;
+        if (commitmentId) {
+          await db
+            .update(commitments)
+            .set({ status: CommitmentStatusEnum.enum.active })
+            .where(eq(commitments.id, commitmentId));
+          logger.info("Commitment activated after payment", { commitmentId });
+        }
         break;
       }
       case "payment_intent.payment_failed": {
@@ -57,7 +76,38 @@ class WebhookService {
           paymentIntentId: paymentIntent.id,
           lastPaymentError: paymentIntent.last_payment_error,
         });
-        await transactionService.updateStatusByStripeId(paymentIntent.id, "failed");
+        await transactionService.updateStatusByStripeId(
+          paymentIntent.id,
+          TransactionStatusEnum.enum.failed,
+        );
+
+        // Revert commitment back to pending_payment so user can retry
+        const { commitmentId } = paymentIntent.metadata;
+        if (commitmentId) {
+          await db
+            .update(commitments)
+            .set({ status: CommitmentStatusEnum.enum.pending_payment })
+            .where(eq(commitments.id, commitmentId));
+          logger.info("Commitment reverted to pending_payment after failed payment", {
+            commitmentId,
+          });
+        }
+        break;
+      }
+      case "charge.refunded": {
+        const charge = event.data.object as Stripe.Charge;
+        const refunds = charge.refunds?.data ?? [];
+        for (const refund of refunds) {
+          if (refund.status !== "succeeded") continue;
+          await this.processRefund(refund);
+        }
+        break;
+      }
+      case "refund.created":
+      case "refund.updated": {
+        const refund = event.data.object as Stripe.Refund;
+        if (refund.status !== "succeeded") break;
+        await this.processRefund(refund);
         break;
       }
       default:
@@ -65,9 +115,31 @@ class WebhookService {
     }
   }
 
-  async handleWebhook(req: Request): Promise<void> {
-    const event = this.verifyAndParse(req);
-    await this.handleEvent(event);
+  private async processRefund(refund: Stripe.Refund): Promise<void> {
+    const refundTx = await transactionService.getByStripeTransactionId(refund.id);
+    if (!refundTx) {
+      logger.warn("No refund transaction found for refund id", { refundId: refund.id });
+      return;
+    }
+    // Skip if already processed
+    if (refundTx.status === "succeeded") {
+      logger.debug("Refund already processed, skipping", { refundId: refund.id });
+      return;
+    }
+    await transactionService.updateStatusByStripeId(
+      refund.id,
+      TransactionStatusEnum.enum.succeeded,
+    );
+    await poolService.subtractRefund(refundTx.amount);
+    await db
+      .update(commitments)
+      .set({ status: CommitmentStatusEnum.enum.cancelled_refunded })
+      .where(eq(commitments.id, refundTx.commitmentId));
+    logger.info("Refund processed", {
+      refundId: refund.id,
+      commitmentId: refundTx.commitmentId,
+      amount: refundTx.amount,
+    });
   }
 }
 

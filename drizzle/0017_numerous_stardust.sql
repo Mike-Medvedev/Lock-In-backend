@@ -1,0 +1,1 @@
+ALTER TYPE "public"."commitment_status" ADD VALUE 'cancelled_refunded' BEFORE 'refund_pending';

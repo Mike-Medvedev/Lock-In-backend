@@ -63,6 +63,8 @@ export const CommitmentsArray = z.array(CommitmentModel);
 
 export const CancelPreviewModel = z.object({
   id: z.uuid(),
+  cancellable: z.boolean(),
+  message: z.string().optional(),
   refundable: z.boolean(),
   forfeitAmount: z.number(),
   stakeAmount: z.number(),

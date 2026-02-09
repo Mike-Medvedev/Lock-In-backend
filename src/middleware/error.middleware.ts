@@ -4,6 +4,8 @@ import {
   CommitmentAlreadyCancelledError,
   CommitmentAlreadyCompletedError,
   CommitmentAlreadyForfeitedError,
+  CommitmentAlreadyStakedError,
+  CommitmentPaymentPendingError,
   CommitmentNotActiveError,
   DatabaseError,
   DatabaseResourceNotFoundError,
@@ -84,6 +86,14 @@ const errorHandler: ErrorRequestHandler = function (
     return res.error(409, error);
   }
   if (error instanceof CommitmentAlreadyCompletedError) {
+    req.log.error(error);
+    return res.error(409, error);
+  }
+  if (error instanceof CommitmentAlreadyStakedError) {
+    req.log.error(error);
+    return res.error(409, error);
+  }
+  if (error instanceof CommitmentPaymentPendingError) {
     req.log.error(error);
     return res.error(409, error);
   }

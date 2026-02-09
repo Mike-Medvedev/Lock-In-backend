@@ -199,5 +199,19 @@ class PaymentService {
       throw error;
     }
   }
+
+  async createRefund(paymentIntentId: string): Promise<Stripe.Refund> {
+    try {
+      const refund = await stripe.refunds.create({
+        payment_intent: paymentIntentId,
+      });
+      return refund;
+    } catch (error) {
+      if (error instanceof Error) {
+        throw new InvalidPaymentRequestError(error);
+      }
+      throw error;
+    }
+  }
 }
 export const paymentService = new PaymentService(db);

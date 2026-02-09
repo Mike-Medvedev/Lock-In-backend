@@ -15,8 +15,8 @@ class PoolService {
   }
 
   /**
-   * Add a successful stake to the pool. Amount is in cents; pool balance is stored in dollars.
-   * Updates the first pool row (singleton pool). Creates the pool row if none exists.
+   * Record a stake we're holding (money owed back to user if they complete or get refunded).
+   * Updates stakes_held only; does not add to available balance.
    */
   async addStake(amountCents: number): Promise<void> {
     const amountDollars = amountCents / 100;
@@ -25,6 +25,45 @@ class PoolService {
       await this._db
         .update(pool)
         .set({
+          stakesHeld: sql`${pool.stakesHeld} + ${amountDollars}`,
+          updatedAt: new Date(),
+        })
+        .where(eq(pool.id, existing.id));
+    } else {
+      await this._db.insert(pool).values({
+        stakesHeld: amountDollars,
+        updatedAt: new Date(),
+      });
+    }
+  }
+
+  /**
+   * Subtract a refunded amount from stakes we're holding (we no longer owe it).
+   */
+  async subtractRefund(amountCents: number): Promise<void> {
+    const amountDollars = amountCents / 100;
+    const [existing] = await this._db.select({ id: pool.id }).from(pool).limit(1);
+    if (!existing) return;
+    await this._db
+      .update(pool)
+      .set({
+        stakesHeld: sql`GREATEST(0, ${pool.stakesHeld} - ${amountDollars})`,
+        updatedAt: new Date(),
+      })
+      .where(eq(pool.id, existing.id));
+  }
+
+  /**
+   * Move a forfeited stake from "held" to actual pool balance (available for bonuses).
+   */
+  async addForfeit(amountCents: number): Promise<void> {
+    const amountDollars = amountCents / 100;
+    const [existing] = await this._db.select({ id: pool.id }).from(pool).limit(1);
+    if (existing) {
+      await this._db
+        .update(pool)
+        .set({
+          stakesHeld: sql`GREATEST(0, ${pool.stakesHeld} - ${amountDollars})`,
           balance: sql`${pool.balance} + ${amountDollars}`,
           updatedAt: new Date(),
         })
