@@ -12,6 +12,7 @@ import CommitmentSessionsRouter from "@/features/commitment-sessions/commitment-
 import PaymentsRouter from "@/features/payments/payments.routes.ts";
 import PoolRouter from "@/features/pool/pool.routes.ts";
 import Webhook from "@/features/webhooks/webhooks.routes";
+import CronRouter from "@/features/cron/cron.routes";
 import errorHandler from "@/middleware/error.middleware.ts";
 import logger from "@/infra/logger/logger";
 import helmet from "helmet";
@@ -60,6 +61,9 @@ app.use(responseHelpers);
 app.use("/webhook", raw({ type: "application/json" }), Webhook);
 app.use(json({ limit: "100kb" }));
 app.use(limiter);
+
+// Internal cron endpoints — authenticated via CRON_SECRET, not user JWT
+app.use("/cron", CronRouter);
 
 v1Router.use("/users", UserRouter);
 v1Router.use("/transactions", TransactionRouter);
