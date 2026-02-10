@@ -139,6 +139,7 @@ class PaymentService {
       if (customerInput.name) params.name = customerInput.name;
       const newCustomer = await stripe.customers.create(params);
       await this.linkStripeCustomerToUser(userId, newCustomer.id);
+      logger.info("Stripe customer created", { userId, stripeCustomerId: newCustomer.id });
       return newCustomer;
     } catch (error) {
       if (error instanceof Error) {
@@ -180,6 +181,12 @@ class PaymentService {
     try {
       const paymentIntent = await stripe.paymentIntents.create(params);
 
+      logger.info("Payment intent created", {
+        paymentIntentId: paymentIntent.id,
+        amount: paymentIntent.amount,
+        customerId: paymentIntent.customer,
+      });
+
       return paymentIntent;
     } catch (error) {
       if (error instanceof Error) {
@@ -191,6 +198,7 @@ class PaymentService {
   async confirmPayment(paymentIntentId: string) {
     try {
       const paymentIntent = await stripe.paymentIntents.confirm(paymentIntentId);
+      logger.info("Payment confirmed", { paymentIntentId });
       return paymentIntent;
     } catch (error) {
       if (error instanceof Error) {
@@ -204,6 +212,11 @@ class PaymentService {
     try {
       const refund = await stripe.refunds.create({
         payment_intent: paymentIntentId,
+      });
+      logger.info("Refund created", {
+        refundId: refund.id,
+        paymentIntentId,
+        amount: refund.amount,
       });
       return refund;
     } catch (error) {

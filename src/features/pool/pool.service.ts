@@ -4,6 +4,7 @@ import { eq, sql } from "drizzle-orm";
 import type { z } from "zod";
 import { PoolModel } from "./pool.model";
 import { DatabaseResourceNotFoundError } from "@/shared/errors";
+import logger from "@/infra/logger/logger";
 
 class PoolService {
   constructor(private readonly _db: DB) {}
@@ -35,6 +36,8 @@ class PoolService {
         updatedAt: new Date(),
       });
     }
+
+    logger.info("Pool: Stake added to stakesHeld", { amountCents, amountDollars });
   }
 
   /**
@@ -51,6 +54,8 @@ class PoolService {
         updatedAt: new Date(),
       })
       .where(eq(pool.id, existing.id));
+
+    logger.info("Pool: Refund subtracted from stakesHeld", { amountCents, amountDollars });
   }
 
   /**
@@ -74,6 +79,8 @@ class PoolService {
         updatedAt: new Date(),
       });
     }
+
+    logger.info("Pool: Forfeit moved from stakesHeld to balance", { amountCents, amountDollars });
   }
 
   /**
@@ -97,6 +104,8 @@ class PoolService {
         updatedAt: new Date(),
       })
       .where(eq(pool.id, existing.id));
+
+    logger.info("Pool: Payout subtracted from stakesHeld", { stakeAmountCents });
   }
 }
 

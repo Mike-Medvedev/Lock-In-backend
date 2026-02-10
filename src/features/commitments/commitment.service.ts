@@ -88,6 +88,8 @@ class CommitmentService {
       })
       .returning();
 
+    logger.info("Commitment created", { commitmentId: commitment?.id, userId });
+
     return CommitmentModel.parse(commitment);
   }
 
@@ -103,6 +105,8 @@ class CommitmentService {
       .set(input)
       .where(eq(commitments.id, commitmentId))
       .returning();
+
+    logger.info("Commitment updated", { commitmentId, userId });
 
     return CommitmentModel.parse(updated);
   }
@@ -146,6 +150,8 @@ class CommitmentService {
         .set({ status: CommitmentStatusEnum.enum.cancelled })
         .where(eq(commitments.id, commitmentId));
 
+      logger.info("Commitment cancelled (no payment)", { commitmentId, userId });
+
       return {
         id: commitment.id,
         refunded: false,
@@ -162,6 +168,8 @@ class CommitmentService {
         .update(commitments)
         .set({ status: CommitmentStatusEnum.enum.cancelled })
         .where(eq(commitments.id, commitmentId));
+
+      logger.info("Commitment cancelled (no successful stake)", { commitmentId, userId });
 
       return {
         id: commitment.id,
@@ -189,6 +197,12 @@ class CommitmentService {
         .set({ status: CommitmentStatusEnum.enum.refund_pending })
         .where(eq(commitments.id, commitmentId));
 
+      logger.info("Commitment cancelled with refund", {
+        commitmentId,
+        userId,
+        refundId: refund.id,
+      });
+
       return {
         id: commitment.id,
         refunded: true,
@@ -215,6 +229,12 @@ class CommitmentService {
         .set({ status: CommitmentStatusEnum.enum.forfeited })
         .where(eq(commitments.id, commitmentId));
 
+      logger.info("Commitment cancelled with forfeit", {
+        commitmentId,
+        userId,
+        forfeitedAmount: commitment.stakeAmount,
+      });
+
       return {
         id: commitment.id,
         refunded: false,
@@ -228,6 +248,8 @@ class CommitmentService {
     await this.getCommitment(id, userId);
 
     await this._db.delete(commitments).where(eq(commitments.id, id));
+
+    logger.info("Commitment deleted", { commitmentId: id, userId });
   }
 
   /**

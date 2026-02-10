@@ -111,7 +111,7 @@ class WebhookService {
         break;
       }
       default:
-        logger.debug("Unhandled Stripe event type", { type: event.type });
+        logger.info("Unhandled Stripe event type", { type: event.type });
     }
   }
 
@@ -123,7 +123,7 @@ class WebhookService {
     }
     // Skip if already processed
     if (refundTx.status === "succeeded") {
-      logger.debug("Refund already processed, skipping", { refundId: refund.id });
+      logger.info("Refund already processed, skipping", { refundId: refund.id });
       return;
     }
     await transactionService.updateStatusByStripeId(

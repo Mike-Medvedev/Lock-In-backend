@@ -4,6 +4,7 @@ import { and, eq } from "drizzle-orm";
 import type { z } from "zod";
 import { TransactionModel, type CreateTransactionParams } from "./transaction.model";
 import { DatabaseResourceNotFoundError } from "@/shared/errors";
+import logger from "@/infra/logger/logger";
 
 export type TransactionRow = z.infer<typeof TransactionModel>;
 
@@ -44,6 +45,14 @@ class TransactionService {
       })
       .returning();
     if (!row) throw new Error("Transaction insert failed");
+
+    logger.info("Transaction created", {
+      transactionId: row.id,
+      commitmentId: params.commitmentId,
+      type: params.transactionType,
+      amount: params.amount,
+    });
+
     return row as z.infer<typeof TransactionModel>;
   }
 
@@ -55,6 +64,8 @@ class TransactionService {
       .update(transactions)
       .set({ status })
       .where(eq(transactions.stripeTransactionId, stripeTransactionId));
+
+    logger.info("Transaction status updated", { stripeTransactionId, status });
   }
 
   async list(_userId: string): Promise<z.infer<typeof TransactionModel>[]> {

@@ -11,6 +11,7 @@ import type {
   PedometerSample,
 } from "./session-sample.model.ts";
 import { GpsSampleModel, MotionSampleModel, PedometerSampleModel } from "./session-sample.model.ts";
+import logger from "@/infra/logger/logger";
 
 class SessionSampleService {
   constructor(private readonly _db: DB) {}
@@ -55,6 +56,13 @@ class SessionSampleService {
       const result = await this._db.insert(pedometerSamples).values(rows).returning();
       pedometerInserted = result.length;
     }
+
+    logger.info("Samples ingested", {
+      commitmentSessionId,
+      motionInserted,
+      gpsInserted,
+      pedometerInserted,
+    });
 
     return {
       motionSamplesInserted: motionInserted,
