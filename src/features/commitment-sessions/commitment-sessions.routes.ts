@@ -11,6 +11,7 @@ import {
 import {
   BatchSamplesModel,
   BatchSamplesResponseModel,
+  GetSamplesResponseModel,
 } from "@/features/session-samples/session-sample.model";
 import { IdParamsSchema } from "@/shared/validators";
 import { ErrorSchema, SuccessSchema } from "@/shared/api-responses";
@@ -192,7 +193,7 @@ CommitmentSessionsRouter.get(
   {
     params: IdParamsSchema,
     responses: {
-      200: SuccessSchema(BatchSamplesResponseModel),
+      200: SuccessSchema(GetSamplesResponseModel),
       401: ErrorSchema,
       403: ErrorSchema,
       404: ErrorSchema,

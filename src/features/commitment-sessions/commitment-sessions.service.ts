@@ -9,6 +9,7 @@ import {
   type CommitmentSession,
   type CreateCommitmentSession,
 } from "./commitment-sessions.model.ts";
+import { DrizzleQueryError } from "drizzle-orm/errors";
 import {
   CommitmentNotActiveError,
   DatabaseError,
@@ -121,7 +122,14 @@ class CommitmentSessionService {
 
       return CommitmentSessionModel.parse(session);
     } catch (error) {
-      if (error instanceof DatabaseError && error.code === PG_ERROR_CODES.UNIQUE_VIOLATION) {
+      const dbError =
+        error instanceof DatabaseError
+          ? error
+          : error instanceof DrizzleQueryError
+            ? new DatabaseError(error)
+            : null;
+
+      if (dbError?.code === PG_ERROR_CODES.UNIQUE_VIOLATION) {
         throw new SessionAlreadyExistsForDayError();
       }
       throw error;

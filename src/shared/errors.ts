@@ -115,7 +115,7 @@ export class CommitmentPaymentPendingError extends Error {
 
 export class SessionAlreadyExistsForDayError extends Error {
   constructor() {
-    super("A session already exists for this commitment on this day");
+    super("A session has already been completed for this commitment today — try again tomorrow");
     this.name = "SessionAlreadyExistsForDayError";
   }
 }

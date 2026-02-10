@@ -71,6 +71,14 @@ export const BatchSamplesResponseModel = z.object({
   pedometerSamplesInserted: z.number(),
 });
 
+// ── Get samples response ──────────────────────────────────────────────
+
+export const GetSamplesResponseModel = z.object({
+  motionSamples: z.array(MotionSampleModel),
+  gpsSamples: z.array(GpsSampleModel),
+  pedometerSamples: z.array(PedometerSampleModel),
+});
+
 // ── Types ──────────────────────────────────────────────────────────────
 
 export type MotionSample = z.infer<typeof MotionSampleModel>;
