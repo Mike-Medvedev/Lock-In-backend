@@ -9,9 +9,11 @@ import logger from "@/infra/logger/logger";
  **/
 export async function verifySessionJob(job: VerificationJob) {
   logger.info("Beginnning verification job ", { jobId: job.id });
+
   const result = VerificationJobDataModel.safeParse(job.data);
   if (!result.success) throw result.error;
   const data = result.data;
+
   const verificationResult = await verificationService.verify(data.session, data.commitmentType);
 
   if (verificationResult.fraudDetected) {

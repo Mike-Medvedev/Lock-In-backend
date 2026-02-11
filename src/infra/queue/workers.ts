@@ -27,5 +27,5 @@ verificationWorker.on("failed", (job, error) => {
 });
 
 verificationWorker.on("error", (error) => {
-  logger.error("Verification worker error", { error: error.message });
+  logger.error("Verification worker error", { error });
 });
