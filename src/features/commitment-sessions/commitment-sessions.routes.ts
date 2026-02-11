@@ -15,6 +15,7 @@ import {
 } from "@/features/session-samples/session-sample.model";
 import { IdParamsSchema } from "@/shared/validators";
 import { ErrorSchema, SuccessSchema } from "@/shared/api-responses";
+import z from "zod";
 
 const CommitmentSessionsRouter = TypedRouter(express.Router(), {
   tag: "Commitment Sessions",
@@ -152,9 +153,9 @@ CommitmentSessionsRouter.post(
   "/:id/verify",
   {
     params: IdParamsSchema,
-    response: SuccessSchema(CommitmentSessionModel),
+    response: SuccessSchema(z.string()),
     responses: {
-      200: SuccessSchema(CommitmentSessionModel),
+      202: SuccessSchema(z.string()),
       400: ErrorSchema,
       401: ErrorSchema,
       403: ErrorSchema,
@@ -162,7 +163,7 @@ CommitmentSessionsRouter.post(
       409: ErrorSchema,
       500: ErrorSchema,
     },
-    summary: "Verify a completed session: runs fraud checks and updates verification status",
+    summary: "Submit a commitment session for verification",
   },
   CommitmentSessionsController.verifySession,
 );

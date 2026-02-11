@@ -1,5 +1,7 @@
 import logger from "@/infra/logger/logger";
 import { client as db } from "@/infra/db/db.ts";
+import { verificationWorker } from "@/infra/queue/workers";
+import { verificationQueue } from "@/infra/queue/queue";
 import type { Server } from "http";
 
 export default function gracefulShutdown(server: Server) {
@@ -11,6 +13,9 @@ export default function gracefulShutdown(server: Server) {
         process.exit(1);
       }
       try {
+        logger.info("Closing BullMQ worker and queue...");
+        await verificationWorker.close();
+        await verificationQueue.close();
         await db.end();
       } finally {
         process.exit(0);

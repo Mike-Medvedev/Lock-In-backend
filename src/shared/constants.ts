@@ -36,3 +36,8 @@ export const FREQUENCY_SESSIONS_PER_WEEK = {
   six_times_a_week: 6,
   seven_times_a_week: 7,
 } as const;
+
+/** Valid Job Types for enquing jobs */
+export enum JOB_NAMES {
+  verify_session = "verify_session",
+}

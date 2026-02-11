@@ -11,10 +11,3 @@ export async function verifyUser(jwt: string): Promise<User> {
   if (error || !user) throw error ?? new AuthInvalidTokenResponseError();
   return user;
 }
-
-const data = await supabase.auth.signInWithPassword({
-  email: "mmedvedev20@gmail.com",
-  password: "12345b67",
-});
-
-console.log(data);

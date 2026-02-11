@@ -235,16 +235,12 @@ export class NoValidStripeSignatureError extends Error {
     this.name = "NoValidStripeSignatureError";
   }
 }
-/**
- * Generic error that wraps an underlying cause. Use when wrapping Stripe/DB/other errors
- * with a clearer message. Handled in error middleware (logs cause, responds with message).
- */
-export class AppError extends Error {
-  statusCode: number;
 
-  constructor(message: string, cause?: Error, statusCode = 500) {
-    super(message, { cause });
-    this.name = "AppError";
-    this.statusCode = statusCode;
+export class VerificationJobNotAddedError extends Error {
+  constructor(jobType: string, sessionId: string, error: Error) {
+    super(`Adding ${jobType} job failed with commitment_session_id: ${sessionId}`, {
+      cause: error,
+    });
+    this.name = "JobNotAddedError";
   }
 }

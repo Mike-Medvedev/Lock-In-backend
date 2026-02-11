@@ -25,14 +25,15 @@ import {
   SessionNotInProgressError,
   SessionNotPausedError,
   UnauthorizedDatabaseRequestError,
+  VerificationJobNotAddedError,
 } from "@/shared/errors.ts";
 import { getDateInTimezone } from "@/shared/date";
-import { verificationService } from "@/features/verification/verification.service";
 import type { VerificationResult } from "@/features/verification/verification.model";
 import { commitmentService } from "@/features/commitments/commitment.service";
 import { CommitmentStatusEnum } from "@/features/commitments/commitment.model";
-import { DURATION_WEEKS, FREQUENCY_SESSIONS_PER_WEEK } from "@/shared/constants";
+import { DURATION_WEEKS, FREQUENCY_SESSIONS_PER_WEEK, JOB_NAMES } from "@/shared/constants";
 import logger from "@/infra/logger/logger";
+import { verificationQueue } from "@/infra/queue/queue.ts";
 
 // ── Session state machine ─────────────────────────────────────────────
 // not_started → in_progress  (create)
@@ -163,23 +164,31 @@ class CommitmentSessionService {
   }
 
   /**
-   * Verify a completed session: runs the fraud-check pipeline, updates the result,
-   * and checks if the commitment is now fulfilled.
-   * Only allowed when sessionStatus=completed AND verificationStatus=pending.
+   * Check if sessionStatus=completed AND verificationStatus=pending
+   * Enqueue a verify session job that verifies the session of fraud
+
    */
-  async verifySession(id: string, userId: string): Promise<CommitmentSession> {
+  async verifySession(id: string, userId: string): Promise<void> {
     const session = await this.getSession(id, userId);
     this.validateCanVerify(session);
 
     const commitment = await commitmentService.getCommitment(session.commitmentId, userId);
-
-    const verificationResult = await verificationService.verify(session, commitment.type);
-
-    if (verificationResult.fraudDetected) {
-      return this.handleFraudDetected(id, userId, session.commitmentId, verificationResult);
+    try {
+      logger.info(`Adding Verification Job to queue for commitmentSessionId: ${session.id}`);
+      await verificationQueue.add(
+        JOB_NAMES.verify_session,
+        { session, commitmentType: commitment.type, userId },
+        {
+          jobId: `verify-${id}`,
+          // removeOnComplete: true,
+          // removeOnFail: true,
+        },
+      );
+    } catch (error) {
+      if (error instanceof Error)
+        throw new VerificationJobNotAddedError(JOB_NAMES.verify_session, id, error);
+      else throw error;
     }
-
-    return this.handleVerificationPassed(id, userId, session.commitmentId, verificationResult);
   }
 
   /**
@@ -346,7 +355,7 @@ class CommitmentSessionService {
   // ── Private helpers ──────────────────────────────────────────────
 
   /** Handle a verification result where fraud was detected. */
-  private async handleFraudDetected(
+  async handleFraudDetected(
     sessionId: string,
     userId: string,
     commitmentId: string,
@@ -375,7 +384,7 @@ class CommitmentSessionService {
   }
 
   /** Handle a verification result that passed. */
-  private async handleVerificationPassed(
+  async handleVerificationPassed(
     sessionId: string,
     userId: string,
     commitmentId: string,

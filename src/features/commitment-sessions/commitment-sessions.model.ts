@@ -7,6 +7,7 @@ import {
 } from "@/infra/db/schema.ts";
 import { IANA_TIMEZONES } from "@/shared/constants.ts";
 import { z } from "zod";
+import { CommitmentTypeEnum } from "../commitments/commitment.model";
 
 /**
  * Validates a non-empty string that must be a valid IANA timezone.
@@ -49,6 +50,12 @@ export const CreateCommitmentSessionModel = z
     timezone: ianaTimezoneSchema,
   })
   .strict();
+
+export const EnqueueVerificationJob = z.object({
+  session: CommitmentSessionModel,
+  commitmentType: CommitmentTypeEnum,
+  userId: z.uuid(),
+});
 
 export const CommitmentSessionsArray = z.array(CommitmentSessionModel);
 

@@ -77,8 +77,8 @@ export const CommitmentSessionsController = {
   async verifySession(req: Request, res: Response, next: NextFunction) {
     try {
       const id = validateIdParams(req.params);
-      const session = await commitmentSessionService.verifySession(id, req.user!.id);
-      res.success(session);
+      await commitmentSessionService.verifySession(id, req.user!.id);
+      res.success("Submitted Session for Verification", 202);
     } catch (error) {
       next(error);
     }

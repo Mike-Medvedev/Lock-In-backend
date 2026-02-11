@@ -21,6 +21,7 @@ import gracefulShutdown from "@/shutdown.ts";
 import { limiter } from "@/middleware/rate-limit.middleware.ts";
 import { swagger } from "meebo";
 import { responseHelpers } from "@/middleware/response.middleware";
+import "@/infra/queue/workers";
 import packageJson from "@root/package.json" with { type: "json" };
 
 const allowedOrigins = config.origins;

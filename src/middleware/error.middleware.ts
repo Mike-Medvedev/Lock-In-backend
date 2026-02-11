@@ -28,6 +28,7 @@ import {
   PayoutError,
   UnauthorizedDatabaseRequestError,
   ZodError,
+  VerificationJobNotAddedError,
 } from "@/shared/errors.ts";
 import z from "zod";
 import { AuthError } from "@supabase/supabase-js";
@@ -163,6 +164,10 @@ const errorHandler: ErrorRequestHandler = function (
     return res.error(400, error);
   }
   if (error instanceof NoValidStripeSignatureError) {
+    req.log.error(error);
+    return res.error(400, error);
+  }
+  if (error instanceof VerificationJobNotAddedError) {
     req.log.error(error);
     return res.error(400, error);
   }
