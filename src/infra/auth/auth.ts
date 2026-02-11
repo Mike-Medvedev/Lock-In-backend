@@ -1,7 +1,7 @@
 import { AuthInvalidTokenResponseError, createClient, type User } from "@supabase/supabase-js";
 import { config } from "@/infra/config/config";
 
-const supabase = createClient(config.SUPABASE_PROJECT_URL, config.SUPABASE_PUBLISHABLE_KEY);
+export const supabase = createClient(config.SUPABASE_PROJECT_URL, config.SUPABASE_PUBLISHABLE_KEY);
 
 export async function verifyUser(jwt: string): Promise<User> {
   const {

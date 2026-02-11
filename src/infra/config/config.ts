@@ -13,6 +13,8 @@ const envSchema = z.object({
   STRIPE_PUBLISHABLE_KEY: z.string().min(1),
   STRIPE_WEBHOOK_SECRET: z.string().min(1).startsWith("whsec_"),
   CRON_SECRET: z.string().min(1),
+  TEST_USER_EMAIL: z.string().min(1),
+  TEST_USER_PASSWORD: z.string().min(1),
 });
 
 const parsed = envSchema.safeParse(process.env);

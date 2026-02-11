@@ -14,5 +14,10 @@ export default defineConfig(({ mode }) => ({
     root: "./src",
     environment: "node",
     env: loadEnv(mode, process.cwd(), ""),
+    server: {
+      deps: {
+        inline: ["supertest"],
+      },
+    },
   },
 }));
