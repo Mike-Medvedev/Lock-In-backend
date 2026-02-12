@@ -6,10 +6,13 @@ import {
   CancelPreviewModel,
   CancelResultModel,
   CommitmentModel,
+  CommitmentProgressModel,
   CommitmentsArray,
   CreateCommitmentModel,
   UpdateCommitmentModel,
 } from "./commitment.model";
+import { CommitmentSessionsArray } from "@/features/commitment-sessions/commitment-sessions.model";
+import { CommitmentSessionsController } from "@/features/commitment-sessions/commitment-sessions.controller";
 import { IdParamsSchema } from "@/shared/validators";
 import { ErrorSchema, SuccessSchema } from "@/shared/api-responses";
 import z from "zod";
@@ -99,6 +102,43 @@ CommitmentRouter.post(
     description: "Cancels the commitment. Refunds if within grace period, forfeits stake if not.",
   },
   CommitmentController.cancelCommitment,
+);
+
+CommitmentRouter.get(
+  "/:id/progress",
+  {
+    params: IdParamsSchema,
+    responses: {
+      200: SuccessSchema(CommitmentProgressModel),
+      400: ErrorSchema,
+      401: ErrorSchema,
+      403: ErrorSchema,
+      404: ErrorSchema,
+      500: ErrorSchema,
+    },
+    summary: "Get commitment progress",
+    description:
+      "Returns the number of completed/verified sessions, current week, and how many sessions are still needed.",
+  },
+  CommitmentController.getProgress,
+);
+
+CommitmentRouter.get(
+  "/:id/sessions",
+  {
+    params: IdParamsSchema,
+    responses: {
+      200: SuccessSchema(CommitmentSessionsArray),
+      400: ErrorSchema,
+      401: ErrorSchema,
+      403: ErrorSchema,
+      404: ErrorSchema,
+      500: ErrorSchema,
+    },
+    summary: "List sessions for a commitment",
+    description: "Returns all sessions (non-cancelled) belonging to a specific commitment.",
+  },
+  CommitmentSessionsController.getSessionsByCommitment,
 );
 
 CommitmentRouter.delete(

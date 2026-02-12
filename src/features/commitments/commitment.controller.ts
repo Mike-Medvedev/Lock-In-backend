@@ -74,6 +74,16 @@ export const CommitmentController = {
     }
   },
 
+  async getProgress(req: Request, res: Response, next: NextFunction) {
+    try {
+      const id = validateIdParams(req.params);
+      const progress = await commitmentService.getProgress(id, req.user!.id);
+      res.success(progress);
+    } catch (error) {
+      next(error);
+    }
+  },
+
   async deleteCommitment(req: Request, res: Response, next: NextFunction) {
     try {
       const id = validateIdParams(req.params);

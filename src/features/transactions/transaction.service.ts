@@ -68,13 +68,22 @@ class TransactionService {
     logger.info("Transaction status updated", { stripeTransactionId, status });
   }
 
-  async list(_userId: string): Promise<z.infer<typeof TransactionModel>[]> {
-    return [];
+  async list(userId: string): Promise<z.infer<typeof TransactionModel>[]> {
+    const rows = await this._db.select().from(transactions).where(eq(transactions.userId, userId));
+    return rows as z.infer<typeof TransactionModel>[];
   }
 
-  async getById(_id: string, _userId: string): Promise<z.infer<typeof TransactionModel>> {
-    console.log(this._db);
-    throw new DatabaseResourceNotFoundError();
+  async getById(id: string, userId: string): Promise<z.infer<typeof TransactionModel>> {
+    const [row] = await this._db
+      .select()
+      .from(transactions)
+      .where(and(eq(transactions.id, id), eq(transactions.userId, userId)));
+
+    if (!row) {
+      throw new DatabaseResourceNotFoundError();
+    }
+
+    return row as z.infer<typeof TransactionModel>;
   }
 }
 

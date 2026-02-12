@@ -7,8 +7,10 @@ import {
   CommitmentAlreadyStakedError,
   CommitmentPaymentPendingError,
   CommitmentNotActiveError,
+  CommitmentRefundPendingError,
   DatabaseError,
   DatabaseResourceNotFoundError,
+  FraudulentSessionError,
   InvalidPaymentRequestError,
   MissingPaymentSecretError,
   MissingTokenError,
@@ -104,6 +106,14 @@ const errorHandler: ErrorRequestHandler = function (
     return res.error(409, error);
   }
   if (error instanceof CommitmentPaymentPendingError) {
+    req.log.error(error);
+    return res.error(409, error);
+  }
+  if (error instanceof CommitmentRefundPendingError) {
+    req.log.error(error);
+    return res.error(409, error);
+  }
+  if (error instanceof FraudulentSessionError) {
     req.log.error(error);
     return res.error(409, error);
   }

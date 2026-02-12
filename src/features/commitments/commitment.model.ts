@@ -85,6 +85,17 @@ export type UpdateCommitment = z.infer<typeof UpdateCommitmentModel>;
 export type CancelPreview = z.infer<typeof CancelPreviewModel>;
 export type CancelResult = z.infer<typeof CancelResultModel>;
 
+export const CommitmentProgressModel = z.object({
+  commitmentId: z.uuid(),
+  totalRequired: z.number(),
+  completedSessions: z.number(),
+  currentWeek: z.number(),
+  totalWeeks: z.number(),
+  sessionsThisWeek: z.number(),
+  requiredPerWeek: z.number(),
+});
+
+export type CommitmentProgress = z.infer<typeof CommitmentProgressModel>;
 export type CommitmentType = z.infer<typeof CommitmentTypeEnum>;
 export type WorkoutFrequency = z.infer<typeof WorkoutFrequencyEnum>;
 export type CommitmentDuration = z.infer<typeof CommitmentDurationEnum>;

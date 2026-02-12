@@ -1,4 +1,4 @@
-import { eq, and, inArray } from "drizzle-orm";
+import { eq, and, inArray, sql } from "drizzle-orm";
 import { db, type DB } from "@/infra/db/db.ts";
 import { commitments, commitmentSessions } from "@/infra/db/schema.ts";
 
@@ -8,6 +8,7 @@ import {
   type CancelPreview,
   type CancelResult,
   type Commitment,
+  type CommitmentProgress,
   type CreateCommitment,
   type UpdateCommitment,
 } from "./commitment.model.ts";
@@ -29,6 +30,7 @@ import { poolService } from "@/features/pool/pool.service";
 import { TransactionStatusEnum } from "@/features/transactions/transaction.model";
 import { transactionService } from "@/features/transactions/transaction.service";
 import { payoutService } from "@/features/payouts/payout.service";
+import { DURATION_WEEKS, FREQUENCY_SESSIONS_PER_WEEK, MS } from "@/shared/constants";
 import logger from "@/infra/logger/logger";
 
 class CommitmentService {
@@ -72,6 +74,28 @@ class CommitmentService {
     }
 
     return CommitmentModel.parse(commitment);
+  }
+
+  async getProgress(commitmentId: string, userId: string): Promise<CommitmentProgress> {
+    const commitment = await this.getCommitment(commitmentId, userId);
+    const { sessionsPerWeek, totalWeeks, totalRequired } = this.getSchedule(commitment);
+    const completedSessions = await this.countVerifiedSessions(commitmentId);
+    const currentWeek = this.getCurrentWeek(commitment.startDate, totalWeeks);
+    const sessionsThisWeek = await this.countVerifiedSessionsInWeek(
+      commitmentId,
+      commitment.startDate,
+      currentWeek,
+    );
+
+    return {
+      commitmentId,
+      totalRequired,
+      completedSessions,
+      currentWeek,
+      totalWeeks,
+      sessionsThisWeek,
+      requiredPerWeek: sessionsPerWeek,
+    };
   }
 
   async createCommitment(userId: string, input: CreateCommitment): Promise<Commitment> {
@@ -339,6 +363,59 @@ class CommitmentService {
     }
 
     return commitment;
+  }
+
+  // ── Shared helpers ──────────────────────────────────────────────
+
+  /** Derive schedule numbers from a commitment's frequency + duration. */
+  getSchedule(commitment: Commitment) {
+    const sessionsPerWeek =
+      FREQUENCY_SESSIONS_PER_WEEK[commitment.frequency as keyof typeof FREQUENCY_SESSIONS_PER_WEEK];
+    const totalWeeks = DURATION_WEEKS[commitment.duration as keyof typeof DURATION_WEEKS];
+    return { sessionsPerWeek, totalWeeks, totalRequired: sessionsPerWeek * totalWeeks };
+  }
+
+  /** Count verified (non-fraud) sessions for a commitment. */
+  async countVerifiedSessions(commitmentId: string): Promise<number> {
+    const [row] = await this._db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(commitmentSessions)
+      .where(
+        and(
+          eq(commitmentSessions.commitmentId, commitmentId),
+          eq(commitmentSessions.verificationStatus, "succeeded"),
+        ),
+      );
+    return row?.count ?? 0;
+  }
+
+  /** Current commitment week (1-indexed, clamped to totalWeeks). */
+  private getCurrentWeek(startDate: Date, totalWeeks: number): number {
+    const elapsedWeeks = (Date.now() - startDate.getTime()) / MS.WEEK;
+    return Math.min(Math.max(Math.ceil(elapsedWeeks), 1), totalWeeks);
+  }
+
+  /** Count verified sessions within a specific week of the commitment. */
+  private async countVerifiedSessionsInWeek(
+    commitmentId: string,
+    startDate: Date,
+    week: number,
+  ): Promise<number> {
+    const weekStart = new Date(startDate.getTime() + (week - 1) * MS.WEEK);
+    const weekEnd = new Date(weekStart.getTime() + MS.WEEK);
+
+    const [row] = await this._db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(commitmentSessions)
+      .where(
+        and(
+          eq(commitmentSessions.commitmentId, commitmentId),
+          eq(commitmentSessions.verificationStatus, "succeeded"),
+          sql`${commitmentSessions.createdAt} >= ${weekStart}`,
+          sql`${commitmentSessions.createdAt} < ${weekEnd}`,
+        ),
+      );
+    return row?.count ?? 0;
   }
 
   private isRefundable(commitment: Commitment): boolean {

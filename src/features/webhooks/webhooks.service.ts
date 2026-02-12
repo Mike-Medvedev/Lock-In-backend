@@ -80,7 +80,7 @@ class WebhookService {
           throw new MissingCommitmentIdError(
             `CommitmentId missing from stripe event with id ${event.id}`,
           );
-        this.handlePaymentConfirmation(paymentIntent.id, paymentIntent.amount, commitmentId);
+        await this.handlePaymentConfirmation(paymentIntent.id, paymentIntent.amount, commitmentId);
 
         break;
       }

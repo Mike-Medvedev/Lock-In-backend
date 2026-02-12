@@ -83,4 +83,17 @@ export const CommitmentSessionsController = {
       next(error);
     }
   },
+
+  async getSessionsByCommitment(req: Request, res: Response, next: NextFunction) {
+    try {
+      const commitmentId = validateIdParams(req.params);
+      const sessions = await commitmentSessionService.getSessionsByCommitmentId(
+        commitmentId,
+        req.user!.id,
+      );
+      res.success(sessions);
+    } catch (error) {
+      next(error);
+    }
+  },
 };

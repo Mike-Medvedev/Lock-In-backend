@@ -1,4 +1,4 @@
-import { eq, and, sql, inArray } from "drizzle-orm";
+import { eq, and, inArray } from "drizzle-orm";
 import { db, type DB } from "@/infra/db/db.ts";
 import { commitmentSessions, commitments } from "@/infra/db/schema.ts";
 
@@ -31,7 +31,7 @@ import { getDateInTimezone } from "@/shared/date";
 import type { VerificationResult } from "@/features/verification/verification.model";
 import { commitmentService } from "@/features/commitments/commitment.service";
 import { CommitmentStatusEnum } from "@/features/commitments/commitment.model";
-import { DURATION_WEEKS, FREQUENCY_SESSIONS_PER_WEEK, JOB_NAMES } from "@/shared/constants";
+import { JOB_NAMES } from "@/shared/constants";
 import logger from "@/infra/logger/logger";
 import { verificationQueue } from "@/infra/queue/queue.ts";
 
@@ -56,6 +56,25 @@ class CommitmentSessionService {
       .select()
       .from(commitmentSessions)
       .where(eq(commitmentSessions.userId, userId));
+    return results.map((row) => CommitmentSessionModel.parse(row));
+  }
+
+  async getSessionsByCommitmentId(
+    commitmentId: string,
+    userId: string,
+  ): Promise<CommitmentSession[]> {
+    // Verify the commitment belongs to this user
+    await commitmentService.getCommitment(commitmentId, userId);
+
+    const results = await this._db
+      .select()
+      .from(commitmentSessions)
+      .where(
+        and(
+          eq(commitmentSessions.commitmentId, commitmentId),
+          eq(commitmentSessions.userId, userId),
+        ),
+      );
     return results.map((row) => CommitmentSessionModel.parse(row));
   }
 
@@ -422,21 +441,8 @@ class CommitmentSessionService {
 
     if (commitment.status !== CommitmentStatusEnum.enum.active) return;
 
-    const sessionsPerWeek =
-      FREQUENCY_SESSIONS_PER_WEEK[commitment.frequency as keyof typeof FREQUENCY_SESSIONS_PER_WEEK];
-    const weeks = DURATION_WEEKS[commitment.duration as keyof typeof DURATION_WEEKS];
-    const totalRequired = sessionsPerWeek * weeks;
-
-    const rows = await this._db
-      .select({ count: sql<number>`count(*)::int` })
-      .from(commitmentSessions)
-      .where(
-        and(
-          eq(commitmentSessions.commitmentId, commitmentId),
-          eq(commitmentSessions.verificationStatus, VerificationStatusEnum.enum.succeeded),
-        ),
-      );
-    const verifiedCount = rows[0]?.count ?? 0;
+    const { totalRequired } = commitmentService.getSchedule(commitment);
+    const verifiedCount = await commitmentService.countVerifiedSessions(commitmentId);
 
     logger.info("Commitment progress check", {
       commitmentId,
