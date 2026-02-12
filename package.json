@@ -31,6 +31,9 @@
   "license": "ISC",
   "type": "module",
   "dependencies": {
+    "@bull-board/api": "^6.18.0",
+    "@bull-board/express": "^6.18.0",
+    "@bull-board/ui": "^6.18.0",
     "@sentry/node": "^10.38.0",
     "@supabase/supabase-js": "^2.94.1",
     "bullmq": "^5.67.3",

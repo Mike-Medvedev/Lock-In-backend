@@ -18,6 +18,16 @@ import { limiter } from "@/middleware/rate-limit.middleware.ts";
 import { swagger } from "meebo";
 import { responseHelpers } from "@/middleware/response.middleware";
 import packageJson from "@root/package.json" with { type: "json" };
+import { createBullBoard } from "@bull-board/api";
+import { BullMQAdapter } from "@bull-board/api/bullMQAdapter";
+import { ExpressAdapter } from "@bull-board/express";
+import { verificationQueue } from "@/infra/queue/queue";
+const serverAdapter = new ExpressAdapter();
+serverAdapter.setBasePath("/admin/queues");
+createBullBoard({
+  queues: [new BullMQAdapter(verificationQueue)],
+  serverAdapter: serverAdapter,
+});
 
 const allowedOrigins = config.origins;
 
@@ -45,6 +55,7 @@ const corsOptions = {
 
 const app = express();
 const v1Router = express.Router();
+app.use("/admin/queues", serverAdapter.getRouter());
 
 app.use(requestLogger);
 app.use(helmet());

@@ -251,3 +251,9 @@ export class MissingCommitmentIdError extends Error {
     this.name = "MissingCommitmentIdError";
   }
 }
+export class FraudulentSessionError extends Error {
+  constructor(error?: Error) {
+    super("Cannot complete commitment, fraudulent session detected", { cause: error });
+    this.name = "FraudulentSessionError";
+  }
+}

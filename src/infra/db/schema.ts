@@ -85,7 +85,7 @@ export const users = pgTable("users", {
   stripeCustomerId: text("stripe_customer_id"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
-  isPremium: boolean().default(false),
+  isPremium: boolean("is_premium").default(false),
 });
 
 export const commitments = pgTable(

@@ -27,6 +27,99 @@ export const payloads = {
     commitmentId,
   }),
 
+  // 3 in_progress sessions on Mon/Wed/Fri of the current week for direct DB insert
+  sessions: (commitmentId: string, userId: string) => [
+    {
+      userId,
+      commitmentId,
+      timezone: "America/Los_Angeles",
+      countingDay: "2026-02-09",
+      startDate: new Date("2026-02-09T08:00:00-08:00"),
+      sessionGoal: "steps" as const,
+      sessionStatus: "in_progress" as const,
+    },
+    {
+      userId,
+      commitmentId,
+      timezone: "America/Los_Angeles",
+      countingDay: "2026-02-11",
+      startDate: new Date("2026-02-11T08:00:00-08:00"),
+      sessionGoal: "steps" as const,
+      sessionStatus: "in_progress" as const,
+    },
+    {
+      userId,
+      commitmentId,
+      timezone: "America/Los_Angeles",
+      countingDay: "2026-02-13",
+      startDate: new Date("2026-02-13T08:00:00-08:00"),
+      sessionGoal: "steps" as const,
+      sessionStatus: "in_progress" as const,
+    },
+  ],
+
+  /**
+   * Generate realistic 2-minute walking data that passes the verification pipeline.
+   *
+   * Requirements for "walk" commitment:
+   *  - Session >= 60s (we do 120s)
+   *  - GPS: >= 3/min (we do 12/min = 24 total at 5s intervals)
+   *  - Motion: >= 30/min (we do 60/min = 120 total at 1s intervals)
+   *  - Accel RMS >= 0.3 m/s²
+   *  - Speed <= 7 mph (~3.1 m/s); we walk at ~1.3 m/s (~3 mph)
+   *  - Pedometer: 30–180 steps/min (we do ~100/min = 200 total)
+   *  - No GPS teleportation
+   */
+  movementDataForSession: (sessionDate: string) => {
+    const baseTime = new Date(`${sessionDate}T16:00:00.000Z`).getTime();
+
+    // Walking east in LA: ~1.3 m/s. 1° lng ≈ 92,000m at 34°N, so 1.3m/s * 5s ≈ 0.0000707° lng per GPS tick.
+    const startLat = 34.0522;
+    const startLng = -118.2437;
+    const lngPerTick = 0.0000707;
+
+    // 24 GPS samples at 5-second intervals (2 minutes)
+    const gpsSamples = Array.from({ length: 24 }, (_, i) => ({
+      capturedAt: new Date(baseTime + i * 5000).toISOString(),
+      lat: startLat + (Math.random() - 0.5) * 0.00001, // tiny lat jitter
+      lng: startLng + i * lngPerTick,
+      speedMps: 1.2 + Math.random() * 0.3, // 1.2–1.5 m/s
+      headingDeg: 88 + Math.random() * 4, // roughly east
+      horizAcc: 3 + Math.random() * 4, // 3–7m accuracy
+    }));
+
+    // 120 motion samples at 1-second intervals (2 minutes)
+    // Walking produces accel magnitudes ~0.4–1.2 m/s² (without gravity)
+    const motionSamples = Array.from({ length: 120 }, (_, i) => {
+      const phase = (i * Math.PI) / 4; // simulate gait oscillation
+      return {
+        capturedAt: new Date(baseTime + i * 1000).toISOString(),
+        intervalMs: 1000,
+        accelX: 0.3 * Math.sin(phase) + (Math.random() - 0.5) * 0.2,
+        accelY: 0.2 * Math.cos(phase) + (Math.random() - 0.5) * 0.15,
+        accelZ: 0.6 + Math.random() * 0.4, // vertical bounce from walking
+        accelGX: 0.3 * Math.sin(phase),
+        accelGY: -9.75 + 0.2 * Math.cos(phase),
+        accelGZ: 1.0 + Math.random() * 0.3,
+        rotAlpha: 45 + Math.random() * 2,
+        rotBeta: 12 + Math.random() * 2,
+        rotGamma: -3 + Math.random() * 2,
+        rotRateAlpha: 0.5 + Math.random() * 0.3,
+        rotRateBeta: -0.3 + Math.random() * 0.2,
+        rotRateGamma: 0.1 + Math.random() * 0.1,
+        orientation: 0,
+      };
+    });
+
+    // 4 pedometer readings at 30-second intervals, ~100 steps/min
+    const pedometerSamples = Array.from({ length: 4 }, (_, i) => ({
+      capturedAt: new Date(baseTime + (i + 1) * 30000).toISOString(),
+      steps: (i + 1) * 50, // 50, 100, 150, 200 cumulative
+    }));
+
+    return { motionSamples, gpsSamples, pedometerSamples };
+  },
+
   session: (commitmentId: string) => ({
     commitmentId,
     timezone: "America/Los_Angeles",
@@ -132,6 +225,26 @@ export const expected = {
     data: { status: "succeeded" },
   },
 
+  insertedSession: (commitmentId: string, userId: string, countingDay: string) => ({
+    id: expect.any(String),
+    userId,
+    commitmentId,
+    startDate: expect.any(Date),
+    endDate: null,
+    createdAt: expect.any(Date),
+    completedAt: null,
+    timezone: "America/Los_Angeles",
+    countingDay,
+    sessionDuration: 0,
+    sessionStatus: "in_progress",
+    verificationStatus: "not_started",
+    sessionGoal: "steps",
+    actualValue: null,
+    flaggedForReview: false,
+    fraudDetected: false,
+    reviewNotes: null,
+  }),
+
   session: (commitmentId: string) => ({
     success: true,
     data: {
@@ -158,9 +271,9 @@ export const expected = {
   movementData: {
     success: true,
     data: {
-      motionSamplesInserted: 2,
-      gpsSamplesInserted: 2,
-      pedometerSamplesInserted: 1,
+      gpsSamplesInserted: 24,
+      motionSamplesInserted: 120,
+      pedometerSamplesInserted: 4,
     },
   },
 

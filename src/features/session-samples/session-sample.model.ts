@@ -1,11 +1,10 @@
 import { createInsertSchema, createSelectSchema } from "drizzle-zod";
-import { gpsSamples, motionSamples, pedometerSamples, sessionStatus } from "@/infra/db/schema.ts";
+import { gpsSamples, motionSamples, pedometerSamples } from "@/infra/db/schema.ts";
 import { z } from "zod";
 
 export const MotionSampleModel = createSelectSchema(motionSamples);
 export const GpsSampleModel = createSelectSchema(gpsSamples);
 export const PedometerSampleModel = createSelectSchema(pedometerSamples);
-export const SessionStatusEnum = createSelectSchema(sessionStatus);
 
 // ── Insert schemas (what the frontend sends) ──────────────────────────
 

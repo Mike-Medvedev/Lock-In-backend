@@ -16,16 +16,3 @@ verificationWorker.on("completed", (job) => {
     sessionId: job.data?.session?.id,
   });
 });
-
-verificationWorker.on("failed", (job, error) => {
-  logger.error("Verification job failed", {
-    jobId: job?.id,
-    sessionId: job?.data?.session?.id,
-    error: error.message,
-    stack: error.stack,
-  });
-});
-
-verificationWorker.on("error", (error) => {
-  logger.error("Verification worker error", { error });
-});

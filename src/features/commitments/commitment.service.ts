@@ -1,6 +1,6 @@
 import { eq, and, inArray } from "drizzle-orm";
 import { db, type DB } from "@/infra/db/db.ts";
-import { commitments } from "@/infra/db/schema.ts";
+import { commitments, commitmentSessions } from "@/infra/db/schema.ts";
 
 import {
   CommitmentModel,
@@ -20,6 +20,7 @@ import {
   CommitmentPaymentPendingError,
   CommitmentRefundPendingError,
   DatabaseResourceNotFoundError,
+  FraudulentSessionError,
   MultipleActiveCommitmentsError,
   UnauthorizedDatabaseRequestError,
 } from "@/shared/errors.ts";
@@ -260,6 +261,7 @@ class CommitmentService {
   async completeCommitment(commitmentId: string, userId: string): Promise<Commitment> {
     const commitment = await this.getCommitment(commitmentId, userId);
     this.validateCompletable(commitment);
+    await this.checkFraudulentSessions(commitmentId);
 
     // ── Delegate payout to dedicated service ─────────────────────
     await payoutService.issueCompletionPayout(commitment, userId);
@@ -274,6 +276,22 @@ class CommitmentService {
     logger.info("Commitment completed", { commitmentId, userId });
 
     return CommitmentModel.parse(updated);
+  }
+
+  private async checkFraudulentSessions(commitmentId: string) {
+    const fradulentSessions = await this._db
+      .select()
+      .from(commitmentSessions)
+      .where(
+        and(
+          eq(commitmentSessions.commitmentId, commitmentId),
+          eq(commitmentSessions.verificationStatus, "failed"),
+        ),
+      ); //failed verification
+
+    if (fradulentSessions.length > 0) {
+      throw new FraudulentSessionError();
+    }
   }
 
   /** Validates that a commitment can be completed (must be active). */
