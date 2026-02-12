@@ -2,8 +2,9 @@ import { db, type DB } from "@/infra/db/db.ts";
 import { pool } from "@/infra/db/schema";
 import { eq, sql } from "drizzle-orm";
 import type { z } from "zod";
-import { PoolModel } from "./pool.model";
+import { PoolModel, type ForfeitBreakdown } from "./pool.model";
 import { DatabaseResourceNotFoundError } from "@/shared/errors";
+import { RAKE } from "@/shared/constants";
 import logger from "@/infra/logger/logger";
 
 class PoolService {
@@ -59,28 +60,49 @@ class PoolService {
   }
 
   /**
-   * Move a forfeited stake from "held" to actual pool balance (available for bonuses).
+   * Move a forfeited stake from "held" into rake + pool balance.
+   *
+   * Split:
+   *   rake  = amountCents × RAKE.RATE  → totalRakeCollected (platform revenue)
+   *   pool  = amountCents − rake        → balance (funds future bonuses)
+   *
+   * Returns the breakdown so callers can log / record it.
    */
-  async addForfeit(amountCents: number): Promise<void> {
-    const amountDollars = amountCents / 100;
+  async addForfeit(amountCents: number): Promise<ForfeitBreakdown> {
+    const rakeCents = Math.round(amountCents * RAKE.RATE);
+    const poolCents = amountCents - rakeCents;
+
+    const totalDollars = amountCents / 100;
+    const rakeDollars = rakeCents / 100;
+    const poolDollars = poolCents / 100;
+
     const [existing] = await this._db.select({ id: pool.id }).from(pool).limit(1);
     if (existing) {
       await this._db
         .update(pool)
         .set({
-          stakesHeld: sql`GREATEST(0, ${pool.stakesHeld} - ${amountDollars})`,
-          balance: sql`${pool.balance} + ${amountDollars}`,
+          stakesHeld: sql`GREATEST(0, ${pool.stakesHeld} - ${totalDollars})`,
+          balance: sql`${pool.balance} + ${poolDollars}`,
+          totalRakeCollected: sql`${pool.totalRakeCollected} + ${rakeDollars}`,
           updatedAt: new Date(),
         })
         .where(eq(pool.id, existing.id));
     } else {
       await this._db.insert(pool).values({
-        balance: amountDollars,
+        balance: poolDollars,
+        totalRakeCollected: rakeDollars,
         updatedAt: new Date(),
       });
     }
 
-    logger.info("Pool: Forfeit moved from stakesHeld to balance", { amountCents, amountDollars });
+    logger.info("Pool: Forfeit processed", {
+      amountCents,
+      rakeCents,
+      poolCents,
+      rakeRate: RAKE.RATE,
+    });
+
+    return { totalCents: amountCents, poolCents, rakeCents };
   }
 
   /**

@@ -106,6 +106,24 @@ class CronService {
     );
   }
 
+  /** Record a rake transaction and mark it as succeeded. */
+  private async recordRakeTransaction(
+    commitment: ExpiredCommitment,
+    stripeCustomerId: string | null,
+    rakeCents: number,
+  ): Promise<void> {
+    const rakeTxId = `rake_${commitment.id}`;
+    await transactionService.create({
+      userId: commitment.userId,
+      commitmentId: commitment.id,
+      stripeTransactionId: rakeTxId,
+      stripeCustomerId,
+      amount: rakeCents,
+      transactionType: "rake",
+    });
+    await transactionService.updateStatusByStripeId(rakeTxId, TransactionStatusEnum.enum.succeeded);
+  }
+
   /** Mark a commitment as forfeited in the database. */
   private async markForfeited(commitmentId: string): Promise<void> {
     await this._db
@@ -147,13 +165,15 @@ class CronService {
     }
 
     await this.recordForfeitTransaction(commitment, stake.stripeCustomerId);
-    await poolService.addForfeit(commitment.stakeAmount);
+    const { rakeCents } = await poolService.addForfeit(commitment.stakeAmount);
+    await this.recordRakeTransaction(commitment, stake.stripeCustomerId, rakeCents);
     await this.markForfeited(commitment.id);
 
     logger.info("Cron: Forfeited commitment", {
       commitmentId: commitment.id,
       userId: commitment.userId,
       stakeAmount: commitment.stakeAmount,
+      rakeCents,
       sessionsCompleted,
       sessionsRequired,
     });

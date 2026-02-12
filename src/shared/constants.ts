@@ -37,6 +37,15 @@ export const FREQUENCY_SESSIONS_PER_WEEK = {
   seven_times_a_week: 7,
 } as const;
 
+/**
+ * Pool rake configuration.
+ * The rake is the platform's cut of every forfeited stake.
+ */
+export const RAKE = {
+  /** Fraction of each forfeit taken as rake (0.20 = 20%). */
+  RATE: 0.2,
+} as const;
+
 /** Valid Job Types for enquing jobs */
 export enum JOB_NAMES {
   verify_session = "verify_session",

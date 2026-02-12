@@ -1,0 +1,61 @@
+---
+description: Folder structure and naming conventions for features, infra, shared, middleware, and tests
+alwaysApply: true
+---
+
+# Project Structure & Naming Conventions
+
+## Directory Layout
+
+```
+src/
+├── features/       # Public domain modules (user-facing functionality)
+├── infra/          # Internal infrastructure (external integrations, clients, DB, auth)
+├── middleware/      # Express middleware
+├── shared/         # Codebase-wide utilities and constants
+├── tests/          # API and integration tests
+└── types/          # Global type declarations
+```
+
+## Features (`src/features/<feature-name>/`)
+
+A feature is a **public domain** of the system — something users interact with (commitments, payments, users, etc.). Each feature lives in its own kebab-case folder with these layer files:
+
+| File                   | Purpose                                             |
+| ---------------------- | --------------------------------------------------- |
+| `<name>.model.ts`      | Types, interfaces, Zod schemas, and type exports    |
+| `<name>.service.ts`    | Business logic only                                 |
+| `<name>.controller.ts` | Request handling — calls service, returns responses |
+| `<name>.routes.ts`     | Route definitions and middleware wiring             |
+
+Optional files when needed:
+
+- `<name>.middleware.ts` — feature-specific middleware
+- `<name>.constants.ts` — feature-specific constants
+- `<name>.checks.ts` — validation/verification logic
+- `<name>.utils.ts` — feature-specific helpers
+
+Not every feature needs routes/controller (e.g. `payouts/` only has model + service if it's used internally by other features).
+
+## Infrastructure (`src/infra/<domain>/`)
+
+Infra modules are **internal integrations** — external clients, database, auth, logging, queues. They are not user-facing domains. Each infra module gets a kebab-case folder:
+
+- `<domain>.ts` — main module export (e.g. `auth.ts`, `config.ts`, `db.ts`, `logger.ts`)
+- `<domain>.client.ts` — external API client wrapper (e.g. `payments.client.ts`)
+- `schema.ts` — Drizzle DB schema (in `db/`)
+- `queue.ts`, `jobs.ts`, `workers.ts`, `jobs.models.ts` — queue infrastructure
+
+## Shared (`src/shared/`)
+
+Codebase-wide utilities with descriptive single-purpose filenames: `errors.ts`, `constants.ts`, `validators.ts`, `date.ts`, `api-responses.ts`, `string.ts`.
+
+## Middleware (`src/middleware/`)
+
+Global Express middleware: `<concern>.middleware.ts` (e.g. `auth.middleware.ts`, `error.middleware.ts`).
+
+## Tests (`src/tests/`)
+
+- `api/<feature-name>/` — mirrors features with `<feature>.test.ts` and optional `<feature>.fixtures.ts`
+- `integration/` — cross-feature integration tests with `fixtures/` subfolder
+- `helpers/` — shared test utilities (`auth.ts`, `db.ts`)

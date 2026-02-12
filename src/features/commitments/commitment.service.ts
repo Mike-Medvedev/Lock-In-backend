@@ -248,7 +248,24 @@ class CommitmentService {
         forfeitTxId,
         TransactionStatusEnum.enum.succeeded,
       );
-      await poolService.addForfeit(commitment.stakeAmount);
+
+      const { rakeCents } = await poolService.addForfeit(commitment.stakeAmount);
+
+      // Record the rake as a separate transaction for audit trail
+      const rakeTxId = `rake_${commitmentId}`;
+      await transactionService.create({
+        userId,
+        commitmentId,
+        stripeTransactionId: rakeTxId,
+        stripeCustomerId: stake.stripeCustomerId,
+        amount: rakeCents,
+        transactionType: "rake",
+      });
+      await transactionService.updateStatusByStripeId(
+        rakeTxId,
+        TransactionStatusEnum.enum.succeeded,
+      );
+
       await this._db
         .update(commitments)
         .set({ status: CommitmentStatusEnum.enum.forfeited })
@@ -258,6 +275,7 @@ class CommitmentService {
         commitmentId,
         userId,
         forfeitedAmount: commitment.stakeAmount,
+        rakeCents,
       });
 
       return {

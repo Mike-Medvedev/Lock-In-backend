@@ -13,6 +13,7 @@ export default defineConfig(({ mode }) => ({
     name: "Lock-In Tests",
     root: "./src",
     environment: "node",
+    fileParallelism: false,
     env: loadEnv(mode, process.cwd(), ""),
     server: {
       deps: {

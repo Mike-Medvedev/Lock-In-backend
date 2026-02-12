@@ -1,0 +1,289 @@
+---
+description: Core engineering best practices — SRP, SoC, DI, DRY, encapsulation, interfaces, error handling, boundaries, singletons
+alwaysApply: true
+---
+
+# Engineering Best Practices
+
+Code must be scalable, maintainable, and readable. A human is reading this.
+
+## Single Responsibility Principle (SRP)
+
+Every function and module does **one thing**. If a function has multiple responsibilities, break it into smaller focused functions.
+
+```typescript
+// ❌ BAD — fetches, transforms, and saves in one function
+async function processOrder(orderId: string) {
+  const order = await db.query.orders.findFirst({ where: eq(orders.id, orderId) });
+  const total = order.items.reduce((sum, i) => sum + i.price * i.qty, 0);
+  await db.update(orders).set({ total, status: "processed" }).where(eq(orders.id, orderId));
+  await sendConfirmationEmail(order.email, total);
+}
+
+// ✅ GOOD — each step is its own function
+function calculateOrderTotal(items: OrderItem[]): number {
+  return items.reduce((sum, i) => sum + i.price * i.qty, 0);
+}
+
+async function finalizeOrder(db: Database, orderId: string, total: number) {
+  await db.update(orders).set({ total, status: "processed" }).where(eq(orders.id, orderId));
+}
+
+async function processOrder(db: Database, orderId: string) {
+  const order = await getOrderById(db, orderId);
+  const total = calculateOrderTotal(order.items);
+  await finalizeOrder(db, orderId, total);
+  await sendConfirmationEmail(order.email, total);
+}
+```
+
+## Separation of Concerns
+
+Keep modules focused on a single domain or layer. Business logic, data access, and request handling should never be mixed in the same function or file. Follow the project's feature-layer convention (`model`, `service`, `controller`, `routes`).
+
+## Dependency Injection
+
+Dependencies (database connections, clients, services) are **passed in** — never created internally. This makes code testable and implementations swappable.
+
+```typescript
+// ❌ BAD — creates its own dependency
+class UserService {
+  private db = new Database();
+}
+
+// ✅ GOOD — dependency is injected
+class UserService {
+  constructor(private db: Database) {}
+}
+
+// ✅ GOOD — function form, dependency as parameter
+function getUserById(db: Database, id: string) {
+  return db.query.users.findFirst({ where: eq(users.id, id) });
+}
+```
+
+## Functions First, Classes When Needed
+
+Default to **plain functions**. Only introduce a class when multiple related functions share state that needs to be managed together.
+
+- **Use functions** for stateless logic, pure transformations, and one-off operations.
+- **Use classes** when you have state + methods that operate on that state as a cohesive unit.
+
+## DRY — Don't Repeat Yourself
+
+If the same logic appears in two or more places, extract it into a shared function or module. Duplicated logic is a maintenance liability.
+
+**Exception:** Test fixtures and mock data can repeat where it improves test clarity and isolation.
+
+```typescript
+// ❌ BAD — same date logic repeated in two services
+// commitment.service.ts
+const deadline = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+// pool.service.ts
+const expiry = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+
+// ✅ GOOD — centralized in shared/
+// shared/date.ts
+export function addDays(date: Date, days: number): Date {
+  return new Date(date.getTime() + days * 24 * 60 * 60 * 1000);
+}
+```
+
+## Encapsulation
+
+Objects hide their data behind abstractions and expose functions that operate on that data. Never expose implementation details — only an interface that lets consumers manipulate the *essence* of the data.
+
+- **Objects** hide data, expose behavior.
+- **Data structures** expose data, have no meaningful behavior.
+
+```typescript
+// ❌ BAD — exposes internal array, callers can misuse it
+class Stack<T> {
+  public items: T[] = [];
+}
+
+// ✅ GOOD — hides storage, exposes a safe interface
+class Stack<T> {
+  private items: T[] = [];
+  push(item: T): void { this.items.push(item); }
+  pop(): T | undefined { return this.items.pop(); }
+  peek(): T | undefined { return this.items[this.items.length - 1]; }
+  get size(): number { return this.items.length; }
+}
+```
+
+## Program to an Interface
+
+Define interfaces for your abstractions. Consuming code depends on the interface, not the concrete implementation. This makes implementations swappable without touching callers.
+
+```typescript
+// ✅ GOOD — consumers depend on the interface, not axios or fetch
+interface HttpClient {
+  get<T>(url: string): Promise<T>;
+  post<T>(url: string, body: unknown): Promise<T>;
+}
+
+class AxiosHttpClient implements HttpClient {
+  async get<T>(url: string) { /* uses axios internally */ }
+  async post<T>(url: string, body: unknown) { /* uses axios internally */ }
+}
+
+// Consuming code doesn't know or care what's behind HttpClient
+function fetchUsers(http: HttpClient) {
+  return http.get<User[]>("/users");
+}
+```
+
+## Error Handling
+
+A robust error strategy is non-negotiable.
+
+- **Global error handler** — always have one for uncaught exceptions in the process.
+- **Catch closest to the source** — handle errors where you have the most context. Rethrow upstream only when a higher layer needs to decide the response (e.g. a centralized Express error middleware).
+- **Custom error classes** — create a file for specialized errors that extend the base `Error`. Use library-provided errors when available (e.g. `DatabaseError`, `InvalidAuthTokenError`).
+- **Standardized error shape** — all errors thrown in the app should conform to a single structure so handlers can process them uniformly.
+
+```typescript
+// shared/errors.ts
+export class AppError extends Error {
+  constructor(
+    message: string,
+    public readonly code: string,
+    public readonly statusCode: number = 500,
+  ) {
+    super(message);
+    this.name = this.constructor.name;
+  }
+}
+
+export class NotFoundError extends AppError {
+  constructor(resource: string) {
+    super(`${resource} not found`, "NOT_FOUND", 404);
+  }
+}
+
+export class ValidationError extends AppError {
+  constructor(message: string) {
+    super(message, "VALIDATION_ERROR", 400);
+  }
+}
+```
+
+## Boundaries
+
+Boundaries are where data flows in and out of your system. This is your first layer of security.
+
+- **Validate and sanitize all incoming data** — never trust unknown input.
+- **Runtime validators** — use Zod schemas (or equivalent) to enforce expected data shapes at every entry point (API routes, webhook handlers, queue consumers).
+- Define TypeScript interfaces for compile-time safety **and** Zod schemas for runtime safety.
+
+```typescript
+// ✅ GOOD — validate at the boundary, trust inside
+import { z } from "zod";
+
+export const CreateCommitmentSchema = z.object({
+  title: z.string().min(1).max(200),
+  amount: z.number().positive(),
+  deadline: z.string().datetime(),
+});
+
+export type CreateCommitmentInput = z.infer<typeof CreateCommitmentSchema>;
+```
+
+## Singletons
+
+Exactly one instance exists for the application's lifetime — cannot be freely instantiated, returns a cached instance.
+
+- **Appropriate for:** shared infrastructure whose identity doesn't matter and whose state is intentionally shared or immutable (clients, adapters, loggers, config).
+- **Never use for:** domain or request-scoped state.
+
+```typescript
+// ✅ GOOD — singleton logger, shared infrastructure
+let instance: Logger | null = null;
+
+export function getLogger(): Logger {
+  if (!instance) {
+    instance = new Logger(config.logLevel);
+  }
+  return instance;
+}
+```
+
+## Type Colocation
+
+Never define TypeScript types, interfaces, or Zod schemas inline in service, controller, or utility files. Types always live in dedicated files:
+
+- **Feature-specific types** go in `<feature>.model.ts` (or a `<feature>.types.ts` if the feature warrants it).
+- **Global types** shared across features go in `src/types/`.
+
+```typescript
+// ❌ BAD — type defined inside the service file
+// features/commitments/commitment.service.ts
+type CommitmentStatus = "active" | "completed" | "failed";
+
+export function getCommitment(id: string): CommitmentStatus { /* ... */ }
+
+// ✅ GOOD — type lives in the feature's model file
+// features/commitments/commitment.model.ts
+export type CommitmentStatus = "active" | "completed" | "failed";
+
+// features/commitments/commitment.service.ts
+import { CommitmentStatus } from "./commitment.model";
+```
+
+## No Magic Strings or Numbers
+
+Never use raw string literals or numbers with implicit meaning in logic. Always use a named constant or enum. If one doesn't exist, create it in `shared/constants.ts` (or the feature's `<feature>.constants.ts` if it's feature-specific).
+
+```typescript
+// ❌ BAD — magic strings scattered in code
+if (commitment.status === "failed") { /* ... */ }
+const fee = amount * 0.029;
+
+// ✅ GOOD — named constants/enums
+// shared/constants.ts
+export const COMMITMENT_STATUS = {
+  ACTIVE: "active",
+  COMPLETED: "completed",
+  FAILED: "failed",
+} as const;
+
+export const STRIPE_FEE_RATE = 0.029;
+
+// commitment.service.ts
+import { COMMITMENT_STATUS, STRIPE_FEE_RATE } from "../../shared/constants";
+
+if (commitment.status === COMMITMENT_STATUS.FAILED) { /* ... */ }
+const fee = amount * STRIPE_FEE_RATE;
+```
+
+## Comments
+
+Comment **why**, not **what**. Well-named functions with a single responsibility are self-documenting — don't clutter them with obvious comments. Reserve comments for:
+
+- **Necessarily complex logic** — algorithms, non-trivial business rules, or multi-step calculations that aren't immediately obvious.
+- **"Why" explanations** — the reason behind a decision that future readers would question.
+- **Workarounds and edge cases** — anything that looks wrong but is intentional.
+
+```typescript
+// ❌ BAD — states the obvious
+// Get user by ID
+function getUserById(db: Database, id: string) { /* ... */ }
+
+// ❌ BAD — narrates every line
+// Check if commitment is expired
+if (commitment.deadline < now) {
+  // Set status to failed
+  commitment.status = COMMITMENT_STATUS.FAILED;
+}
+
+// ✅ GOOD — explains a non-obvious business rule
+// Stripe requires amounts in cents, but our DB stores dollars.
+// We also round to avoid floating-point drift on partial refunds.
+const chargeAmount = Math.round(order.total * 100);
+
+// ✅ GOOD — explains WHY, not what
+// We settle pools 24h after deadline to allow for late check-in
+// grace period before redistributing funds.
+const settlementDate = addHours(commitment.deadline, 24);
+```

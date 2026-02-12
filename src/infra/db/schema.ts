@@ -220,10 +220,10 @@ export const transactions = pgTable(
     status: transactionStatus("status").notNull().default("pending"),
     stripeCustomerId: text("stripe_customer_id"), // nullable for guest payments
     stripeTransactionId: text("stripe_transaction_id").notNull(),
-    amount: bigint("amount", { mode: "number" }).notNull(), // > 50 cents
+    amount: bigint("amount", { mode: "number" }).notNull(), // in cents; stakes enforced by commitments.stake_amount_check
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
-  (table) => [check("transaction_amount_check", sql`${table.amount} > 50`)],
+  (table) => [check("transaction_amount_check", sql`${table.amount} > 0`)],
 );
 
 export const pool = pgTable("pool", {
