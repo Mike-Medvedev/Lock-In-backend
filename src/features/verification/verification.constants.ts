@@ -5,7 +5,7 @@
 
 import { CommitmentTypeEnum } from "@/features/commitments/commitment.model";
 import type { CommitmentType } from "@/features/commitments/commitment.model";
-import type { ActivityThresholds } from "./verification.model";
+import type { ActivityThresholds, GoalTargets } from "./verification.model";
 
 // ── Data density (minimum samples per minute of session) ──────────────
 
@@ -75,3 +75,27 @@ export const ACTIVITY_THRESHOLDS: Partial<Record<CommitmentType, ActivityThresho
 /** Default thresholds when the commitment type has no specific config (e.g. sleep). */
 export const DEFAULT_ACTIVITY_THRESHOLDS: ActivityThresholds =
   ACTIVITY_THRESHOLDS[CommitmentTypeEnum.enum.run]!;
+
+// ── Session goal targets (minimum effort to count as a valid session) ──
+
+/**
+ * Per-activity minimum targets.
+ * A session that doesn't meet these is considered insufficient effort.
+ * Adjust these as you learn what real users actually achieve.
+ */
+export const SESSION_GOAL_TARGETS: Partial<Record<CommitmentType, GoalTargets>> = {
+  [CommitmentTypeEnum.enum.walk]: {
+    minSteps: 2_000,
+    minMiles: 0.5,
+  },
+  [CommitmentTypeEnum.enum.run]: {
+    minSteps: 3_000,
+    minMiles: 1.0,
+  },
+};
+
+/** Default targets when the commitment type has no specific config. */
+export const DEFAULT_GOAL_TARGETS: GoalTargets = {
+  minSteps: 1_000,
+  minMiles: 0.25,
+};

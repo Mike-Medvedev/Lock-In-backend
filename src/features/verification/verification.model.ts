@@ -45,6 +45,8 @@ export interface CheckInput {
   motionSamples: MotionSample[];
   pedometerSamples: PedometerSample[];
   sessionDurationSeconds: number;
+  /** Freshly calculated actual value (steps/miles) — not the DB value which may be null. */
+  actualValue: number;
 }
 
 /** Per-activity thresholds used by fraud checks. */
@@ -54,6 +56,14 @@ export interface ActivityThresholds {
   minStepsPerMin: number;
   maxStepsPerMin: number;
   minAccelRms: number;
+}
+
+/** Minimum targets a session must hit to count as "real effort". */
+export interface GoalTargets {
+  /** Minimum step count for a steps-based session. */
+  minSteps: number;
+  /** Minimum distance (miles) for a miles-based session. */
+  minMiles: number;
 }
 
 // ── Exported types ─────────────────────────────────────────────────────

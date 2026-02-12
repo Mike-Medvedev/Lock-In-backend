@@ -6,7 +6,13 @@
  */
 
 import type { CommitmentType } from "@/features/commitments/commitment.model";
-import type { ActivityThresholds, CheckInput, CheckResult } from "./verification.model";
+import { SessionGoalEnum } from "@/features/commitment-sessions/commitment-sessions.model";
+import type {
+  ActivityThresholds,
+  CheckInput,
+  CheckResult,
+  GoalTargets,
+} from "./verification.model";
 import { haversineMeters, mpsToMph, accelMagnitude, rms, sortByTime } from "./verification.utils";
 import {
   MIN_GPS_SAMPLES_PER_MIN,
@@ -21,6 +27,8 @@ import {
   TIMESTAMP_GAP_FAIL_RATIO,
   ACTIVITY_THRESHOLDS,
   DEFAULT_ACTIVITY_THRESHOLDS,
+  SESSION_GOAL_TARGETS,
+  DEFAULT_GOAL_TARGETS,
 } from "./verification.constants";
 
 // ── Helpers ───────────────────────────────────────────────────────────
@@ -28,6 +36,11 @@ import {
 /** Resolve thresholds for a commitment type, falling back to the default. */
 function getThresholds(commitmentType: CommitmentType): ActivityThresholds {
   return ACTIVITY_THRESHOLDS[commitmentType] ?? DEFAULT_ACTIVITY_THRESHOLDS;
+}
+
+/** Resolve goal targets for a commitment type, falling back to the default. */
+function getGoalTargets(commitmentType: CommitmentType): GoalTargets {
+  return SESSION_GOAL_TARGETS[commitmentType] ?? DEFAULT_GOAL_TARGETS;
 }
 
 // ── Check implementations ─────────────────────────────────────────────
@@ -315,4 +328,55 @@ export function checkGpsMotionCorrelation(input: CheckInput): CheckResult {
   }
 
   return { passed: true, flagged: false, note: null };
+}
+
+// ── Session goal target check ─────────────────────────────────────────
+
+/**
+ * Verify the session achieved a minimum effort threshold for its goal type.
+ * A user who walks 50 steps in 30 minutes technically moved, but didn't
+ * put in real effort. This check ensures the session meets a baseline target.
+ *
+ * Targets are defined per activity type in SESSION_GOAL_TARGETS.
+ */
+export function checkSessionGoalTarget(input: CheckInput): CheckResult {
+  const { session, commitmentType, actualValue } = input;
+  const targets = getGoalTargets(commitmentType);
+  const actual = actualValue;
+
+  switch (session.sessionGoal) {
+    case SessionGoalEnum.enum.steps: {
+      if (actual < targets.minSteps) {
+        return {
+          passed: false,
+          flagged: false,
+          note: `Steps too low: ${actual} (need >= ${targets.minSteps} for ${commitmentType})`,
+        };
+      }
+      return { passed: true, flagged: false, note: null };
+    }
+
+    case SessionGoalEnum.enum.miles: {
+      if (actual < targets.minMiles) {
+        return {
+          passed: false,
+          flagged: false,
+          note: `Distance too low: ${actual} mi (need >= ${targets.minMiles} mi for ${commitmentType})`,
+        };
+      }
+      return { passed: true, flagged: false, note: null };
+    }
+
+    case SessionGoalEnum.enum.screen_time:
+    case SessionGoalEnum.enum.sleep_time:
+      // Not implemented yet — pass through without checking
+      return {
+        passed: true,
+        flagged: true,
+        note: `Goal type "${session.sessionGoal}" has no target threshold yet`,
+      };
+
+    default:
+      return { passed: true, flagged: true, note: `Unknown goal type: ${session.sessionGoal}` };
+  }
 }

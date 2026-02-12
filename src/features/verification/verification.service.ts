@@ -22,6 +22,7 @@ import {
   checkPedometerPlausibility,
   checkTimestampIntegrity,
   checkGpsMotionCorrelation,
+  checkSessionGoalTarget,
 } from "./verification.checks";
 
 /**
@@ -69,6 +70,7 @@ class VerificationService {
       motionSamples,
       pedometerSamples,
       sessionDurationSeconds,
+      actualValue,
     };
 
     // ── Run fraud checks ──────────────────────────────────────────
@@ -180,6 +182,7 @@ class VerificationService {
       { name: "pedometer_plausibility", fn: checkPedometerPlausibility },
       { name: "timestamp_integrity", fn: checkTimestampIntegrity },
       { name: "gps_motion_correlation", fn: checkGpsMotionCorrelation },
+      { name: "session_goal_target", fn: checkSessionGoalTarget },
     ];
 
     const notes: string[] = [];
