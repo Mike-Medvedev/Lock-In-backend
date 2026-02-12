@@ -2,7 +2,7 @@ import type Stripe from "stripe";
 import type { Request } from "express";
 import stripe from "@/infra/payments/payments.client";
 import { config } from "@/infra/config/config";
-import { NoValidStripeSignatureError } from "@/shared/errors";
+import { MissingCommitmentIdError, NoValidStripeSignatureError } from "@/shared/errors";
 import logger from "@/infra/logger/logger";
 import { db } from "@/infra/db/db";
 import { commitments } from "@/infra/db/schema";
@@ -43,6 +43,28 @@ class WebhookService {
     }
   }
 
+  async handlePaymentConfirmation(
+    paymentIntentId: string,
+    paymentIntentAmount: number,
+    commitmentId: string,
+  ) {
+    await transactionService.updateStatusByStripeId(
+      paymentIntentId,
+      TransactionStatusEnum.enum.succeeded,
+    );
+    await poolService.addStake(paymentIntentAmount);
+
+    // Activate the commitment now that payment is confirmed
+
+    if (commitmentId) {
+      await db
+        .update(commitments)
+        .set({ status: CommitmentStatusEnum.enum.active })
+        .where(eq(commitments.id, commitmentId));
+      logger.info("Commitment activated after payment", { commitmentId });
+    }
+  }
+
   async handleEvent(event: Stripe.Event): Promise<void> {
     logger.info("Stripe webhook event received", { type: event.type, id: event.id });
     switch (event.type) {
@@ -53,21 +75,13 @@ class WebhookService {
           amount: paymentIntent.amount,
           metadata: paymentIntent.metadata,
         });
-        await transactionService.updateStatusByStripeId(
-          paymentIntent.id,
-          TransactionStatusEnum.enum.succeeded,
-        );
-        await poolService.addStake(paymentIntent.amount);
-
-        // Activate the commitment now that payment is confirmed
         const { commitmentId } = paymentIntent.metadata;
-        if (commitmentId) {
-          await db
-            .update(commitments)
-            .set({ status: CommitmentStatusEnum.enum.active })
-            .where(eq(commitments.id, commitmentId));
-          logger.info("Commitment activated after payment", { commitmentId });
-        }
+        if (!commitmentId)
+          throw new MissingCommitmentIdError(
+            `CommitmentId missing from stripe event with id ${event.id}`,
+          );
+        this.handlePaymentConfirmation(paymentIntent.id, paymentIntent.amount, commitmentId);
+
         break;
       }
       case "payment_intent.payment_failed": {

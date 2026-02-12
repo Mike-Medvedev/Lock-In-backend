@@ -244,3 +244,10 @@ export class VerificationJobNotAddedError extends Error {
     this.name = "JobNotAddedError";
   }
 }
+
+export class MissingCommitmentIdError extends Error {
+  constructor(message: string, error?: Error) {
+    super(message, { cause: error });
+    this.name = "MissingCommitmentIdError";
+  }
+}

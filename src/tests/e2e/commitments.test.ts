@@ -7,6 +7,7 @@ import { client as db } from "@/infra/db/db.ts";
 import { supabase } from "@/infra/auth/auth";
 import { config } from "@/infra/config/config";
 import { payloads, expected } from "./fixtures/commitments.fixtures";
+import { webhookService } from "@/features/webhooks/webhooks.service";
 
 const request = supertest;
 let auth: supertest.Agent;
@@ -71,6 +72,11 @@ describe("e2e", () => {
     const res = await auth.post("/api/v1/payments/confirm").send({ paymentIntentId });
 
     expect(res.body).toEqual(expected.paymentConfirmed);
+  });
+
+  it("runs stripe webhook payment confirmation event procedure", async () => {
+    const paymentAmount = expected.commitment.data.stakeAmount;
+    await webhookService.handlePaymentConfirmation(paymentIntentId, paymentAmount, commitmentId);
   });
 
   it("creates commitment session", async () => {
