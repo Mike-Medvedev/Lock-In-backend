@@ -49,7 +49,7 @@ describe("misc", () => {
  *  6. Submit to verification pipeline
  *  7. Receive verification result
  */
-describe("e2e", () => {
+describe("new commitment flow", () => {
   let commitmentId: string;
   let paymentIntentId: string;
   let commitmentSessionId: string;
