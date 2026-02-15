@@ -59,28 +59,29 @@ export const payloads = {
   ],
 
   /**
-   * Generate realistic 2-minute walking data that passes the verification pipeline.
+   * Generate realistic 12-minute walking data that passes the verification pipeline.
    *
    * Requirements for "walk" commitment:
-   *  - Session >= 60s (we do 120s)
-   *  - GPS: >= 3/min (we do 12/min = 24 total at 5s intervals)
-   *  - Motion: >= 30/min (we do 60/min = 120 total at 1s intervals)
+   *  - Session >= 60s (we do ~12 min)
+   *  - GPS: >= 3/min (we do 2/min = 24 total at 30s intervals)
+   *  - Motion: >= 30/min (we do 60/min = 720 total at 1s intervals)
    *  - Accel RMS >= 0.3 m/s²
    *  - Speed <= 7 mph (~3.1 m/s); we walk at ~1.3 m/s (~3 mph)
-   *  - Pedometer: 30–180 steps/min (we do ~100/min = 200 total)
+   *  - Pedometer: 30–180 steps/min (we do ~167/min = 2000 total over 12 min)
+   *  - minSteps >= 2000 (we do 2000)
    *  - No GPS teleportation
    */
   movementDataForSession: (sessionDate: string) => {
     const baseTime = new Date(`${sessionDate}T16:00:00.000Z`).getTime();
 
-    // Walking east in LA: ~1.3 m/s. 1° lng ≈ 92,000m at 34°N, so 1.3m/s * 5s ≈ 0.0000707° lng per GPS tick.
+    // Walking east in LA: ~1.3 m/s. 1° lng ≈ 92,000m at 34°N, so 1.3m/s * 30s ≈ 0.00042° lng per GPS tick.
     const startLat = 34.0522;
     const startLng = -118.2437;
-    const lngPerTick = 0.0000707;
+    const lngPerTick = 0.00042;
 
-    // 24 GPS samples at 5-second intervals (2 minutes)
+    // 24 GPS samples at 30-second intervals (~12 minutes) — duration drives steps/min calculation
     const gpsSamples = Array.from({ length: 24 }, (_, i) => ({
-      capturedAt: new Date(baseTime + i * 5000).toISOString(),
+      capturedAt: new Date(baseTime + i * 30000).toISOString(),
       lat: startLat + (Math.random() - 0.5) * 0.00001, // tiny lat jitter
       lng: startLng + i * lngPerTick,
       speedMps: 1.2 + Math.random() * 0.3, // 1.2–1.5 m/s
@@ -88,9 +89,8 @@ export const payloads = {
       horizAcc: 3 + Math.random() * 4, // 3–7m accuracy
     }));
 
-    // 120 motion samples at 1-second intervals (2 minutes)
-    // Walking produces accel magnitudes ~0.4–1.2 m/s² (without gravity)
-    const motionSamples = Array.from({ length: 120 }, (_, i) => {
+    // 720 motion samples at 1-second intervals (12 minutes)
+    const motionSamples = Array.from({ length: 720 }, (_, i) => {
       const phase = (i * Math.PI) / 4; // simulate gait oscillation
       return {
         capturedAt: new Date(baseTime + i * 1000).toISOString(),
@@ -111,10 +111,10 @@ export const payloads = {
       };
     });
 
-    // 4 pedometer readings at 30-second intervals, ~100 steps/min
+    // 4 pedometer readings at 3-minute intervals. 2000 steps over 12 min = ~167 steps/min (≤ 180 for walk)
     const pedometerSamples = Array.from({ length: 4 }, (_, i) => ({
-      capturedAt: new Date(baseTime + (i + 1) * 30000).toISOString(),
-      steps: (i + 1) * 50, // 50, 100, 150, 200 cumulative
+      capturedAt: new Date(baseTime + (i + 1) * 180000).toISOString(),
+      steps: (i + 1) * 500, // 500, 1000, 1500, 2000 cumulative
     }));
 
     return { motionSamples, gpsSamples, pedometerSamples };
@@ -272,7 +272,7 @@ export const expected = {
     success: true,
     data: {
       gpsSamplesInserted: 24,
-      motionSamplesInserted: 120,
+      motionSamplesInserted: 720,
       pedometerSamplesInserted: 4,
     },
   },

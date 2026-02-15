@@ -144,15 +144,22 @@ class WebhookService {
       refund.id,
       TransactionStatusEnum.enum.succeeded,
     );
-    await poolService.subtractRefund(refundTx.amount);
-    await db
-      .update(commitments)
-      .set({ status: CommitmentStatusEnum.enum.cancelled_refunded })
-      .where(eq(commitments.id, refundTx.commitmentId));
+
+    // Completion payouts: pool already updated in issueCompletionPayout; commitment stays "completed".
+    // Cancellation refunds: subtract from pool and set commitment to cancelled_refunded.
+    if (refundTx.transactionType === "refund") {
+      await poolService.subtractRefund(refundTx.amount);
+      await db
+        .update(commitments)
+        .set({ status: CommitmentStatusEnum.enum.cancelled_refunded })
+        .where(eq(commitments.id, refundTx.commitmentId));
+    }
+
     logger.info("Refund processed", {
       refundId: refund.id,
       commitmentId: refundTx.commitmentId,
       amount: refundTx.amount,
+      transactionType: refundTx.transactionType,
     });
   }
 }

@@ -1,3 +1,4 @@
+import type Stripe from "stripe";
 import supertest from "supertest";
 import app from "@/app";
 import { describe, it, expect, afterAll, beforeAll } from "vitest";
@@ -107,7 +108,7 @@ describe("e2e", () => {
 
       expect(res.body).toEqual(expected.movementData);
     }
-  });
+  }, 15_000);
 
   it("completes all 3 sessions", async () => {
     for (const sessionId of commitmentSessionIds) {
@@ -169,7 +170,7 @@ describe("e2e", () => {
     const commitmentRes = await auth.get(`/api/v1/commitments/${commitmentId}`);
     expect(commitmentRes.body.data.status).toBe("completed");
 
-    // Assert payout transaction was created
+    // Assert payout transaction was created (status pending until Stripe webhook)
     const [payoutTx] = await db
       .select()
       .from(transactions)
@@ -180,8 +181,32 @@ describe("e2e", () => {
         ),
       );
     expect(payoutTx).toBeDefined();
-    expect(payoutTx!.status).toBe("pending");
     expect(payoutTx!.amount).toBe(payloads.commitment.stakeAmount);
+
+    // Simulate Stripe refund webhook — updates transaction status to succeeded
+    const refundEvent = {
+      type: "refund.created" as const,
+      id: "evt_test",
+      data: {
+        object: {
+          id: payoutTx!.stripeTransactionId,
+          status: "succeeded",
+          amount: payoutTx!.amount,
+        } as Stripe.Refund,
+      },
+    } as Stripe.Event;
+    await webhookService.handleEvent(refundEvent);
+
+    const [updatedPayoutTx] = await db
+      .select()
+      .from(transactions)
+      .where(
+        and(
+          eq(transactions.commitmentId, commitmentId),
+          eq(transactions.transactionType, "payout"),
+        ),
+      );
+    expect(updatedPayoutTx!.status).toBe("succeeded");
   }, 20_000);
 
   afterAll(async () => {

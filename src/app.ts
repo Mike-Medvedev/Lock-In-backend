@@ -22,6 +22,7 @@ import { createBullBoard } from "@bull-board/api";
 import { BullMQAdapter } from "@bull-board/api/bullMQAdapter";
 import { ExpressAdapter } from "@bull-board/express";
 import { verificationQueue } from "@/infra/queue/queue";
+import "@/infra/queue/workers";
 const serverAdapter = new ExpressAdapter();
 serverAdapter.setBasePath("/admin/queues");
 createBullBoard({
@@ -66,7 +67,7 @@ app.use(responseHelpers);
 //TODO MAKE WEBHOOK PART OF V1ROUTER BY CHANGING ENDPOINT URL REGISTERED WITH STRIPE TO USE /API/V1
 // Webhook must receive raw body for Stripe signature verification; mount before json()
 app.use("/webhook", raw({ type: "application/json" }), Webhook);
-app.use(json({ limit: "100kb" }));
+app.use(json({ limit: "1000kb" }));
 app.use(limiter);
 
 // Internal cron endpoints — authenticated via CRON_SECRET, not user JWT

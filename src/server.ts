@@ -1,7 +1,6 @@
 import "dotenv/config";
 import "@root/sentry.config.js";
 import "@root/meebo.config";
-import "@/infra/queue/workers";
 
 import { config } from "@/infra/config/config";
 import logger from "@/infra/logger/logger";
